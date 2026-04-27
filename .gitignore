@@ -1,0 +1,9 @@
+# Ignorar arquivos de ambiente da raiz
+.env
+.env.*
+!.env.example
+
+# Ignorar pastas de editores e Sistema Operacional
+.vscode/
+.idea/
+.DS_Store

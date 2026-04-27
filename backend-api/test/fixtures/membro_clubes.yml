@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  clube: one
+  user: one
+  data_entrada: 2026-01-05
+  eh_administrador: false
+
+two:
+  clube: two
+  user: two
+  data_entrada: 2026-01-05
+  eh_administrador: false

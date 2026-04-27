@@ -1,0 +1,42 @@
+<nav class="navbar" *ngIf="exibirNavbar">
+    <div class="logo-area" (click)="navegarPara('/dashboard')">
+        <img src="logo.png" alt="Clube Filme Logo" class="nav-logo">
+    </div>
+
+    <div class="nav-links">
+        <ng-container *ngIf="!isSetupPage">
+            <div class="profile-dropdown">
+                <div class="profile-header" (click)="toggleMenu()">
+                    <button class="btn-notification">🔔</button>
+
+                    <div class="avatar-circle">
+                        <img *ngIf="usuario.foto" [src]="usuario.foto" alt="Avatar">
+                        <span *ngIf="!usuario.foto">{{ usuario.nickname?.charAt(0)?.toUpperCase() }}</span>
+                    </div>
+
+                    <span class="username">{{ usuario.nickname }}</span>
+                    <span class="arrow">▼</span>
+                </div>
+
+                <div class="dropdown-menu" *ngIf="menuAberto">
+                    <div class="dropdown-item" (click)="navegarPara('/perfil')">
+                        <span class="icon">👤</span> Meu Perfil
+                    </div>
+                    <div class="dropdown-item" (click)="navegarPara('/filmes')">
+                        <span class="icon">🎬</span> Catálogo
+                    </div>
+                    <div class="divider"></div>
+                    <div class="dropdown-item danger" (click)="logout()">
+                        <span class="icon">↪</span> Sair
+                    </div>
+                </div>
+            </div>
+        </ng-container>
+
+        <ng-container *ngIf="isSetupPage">
+            <button class="btn-simple-logout" (click)="logout()">
+                Sair
+            </button>
+        </ng-container>
+    </div>
+</nav>

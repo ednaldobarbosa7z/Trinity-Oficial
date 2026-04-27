@@ -1,0 +1,15 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  nome: MyString
+  codigo_acesso: MyString
+  descricao: MyText
+  data_criacao: 2026-01-05
+  foto_clube: MyString
+
+two:
+  nome: MyString
+  codigo_acesso: MyString
+  descricao: MyText
+  data_criacao: 2026-01-05
+  foto_clube: MyString

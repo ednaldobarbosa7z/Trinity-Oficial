@@ -1,0 +1,495 @@
+.catalogo-container {
+    min-height: 100vh;
+    background: #121212;
+    padding: 2rem;
+    color: white;
+
+    @media (max-width: 768px) {
+        padding: 1rem;
+    }
+}
+
+.page-header {
+    margin-bottom: 3rem;
+    text-align: center;
+
+    h1 {
+        font-size: 2.5rem;
+        color: #00ff88;
+        margin-bottom: 0.5rem;
+
+        @media (max-width: 768px) {
+            font-size: 2rem;
+        }
+    }
+
+    p {
+        color: #888;
+        font-size: 1.1rem;
+
+        @media (max-width: 768px) {
+            font-size: 0.95rem;
+        }
+    }
+}
+
+/* DIVISOR DE CICLOS */
+.ciclo-divider {
+    max-width: 1200px;
+    margin: 3rem auto 1.5rem auto;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+
+    .ciclo-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-shrink: 0;
+
+        @media (max-width: 768px) {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: #fff;
+            text-transform: uppercase;
+
+            .ano {
+                color: #555;
+                font-weight: 400;
+            }
+
+            @media (max-width: 768px) {
+                font-size: 1.4rem;
+            }
+        }
+
+        .tema-badge {
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            border: 1px solid #ffc107;
+        }
+    }
+
+    .line {
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, #333 0%, transparent 100%);
+    }
+}
+
+.empty-catalogo {
+    text-align: center;
+    padding: 5rem 0;
+    color: #666;
+    font-size: 1.2rem;
+}
+
+/* GRID DE FILMES */
+.movies-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+
+    @media (max-width: 768px) {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 1rem;
+    }
+}
+
+.movie-card {
+    cursor: pointer;
+    transition: transform 0.3s ease;
+
+    &:hover {
+        transform: translateY(-10px);
+
+        .poster-overlay {
+            opacity: 1;
+        }
+    }
+
+    .poster-wrapper {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        aspect-ratio: 2 / 3;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+        background: #1e1e1e;
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .poster-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+
+            .rating-circle {
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                border: 3px solid #ffc107;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.5rem;
+                font-weight: 800;
+                color: #ffc107;
+                margin-bottom: 1rem;
+
+                &.high {
+                    border-color: #00ff88;
+                    color: #00ff88;
+                }
+            }
+
+            .view-details {
+                font-weight: bold;
+                text-transform: uppercase;
+                font-size: 0.8rem;
+                letter-spacing: 1px;
+            }
+        }
+    }
+
+    .movie-meta {
+        margin-top: 10px;
+
+        .title {
+            font-size: 1rem;
+            margin: 0;
+            color: #eee;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .year {
+            color: #666;
+            font-size: 0.9rem;
+        }
+    }
+}
+
+/* MODAL RAIO-X */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    overflow-y: auto;
+    padding: 2rem 0;
+    backdrop-filter: blur(8px);
+}
+
+.modal-raiox {
+    background: #1e1e1e;
+    width: 95%;
+    max-width: 900px;
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid #333;
+    margin-bottom: 2rem;
+
+    .btn-close {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 10;
+        background: rgba(0, 0, 0, 0.5);
+        border: none;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+    }
+}
+
+.modal-hero {
+    height: 400px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+
+    .hero-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+    }
+
+    .hero-content {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        padding: 2rem;
+
+        .hero-main {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-end;
+
+            .modal-poster {
+                width: 180px;
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+                filter: brightness(0.7);
+            }
+
+            .hero-text {
+                flex: 1;
+
+                h2 {
+                    font-size: 2.5rem;
+                    margin: 0.5rem 0;
+
+                    small {
+                        color: #888;
+                        font-weight: normal;
+                    }
+                }
+
+                .indicado {
+                    color: #00ff88;
+                    text-transform: uppercase;
+                    font-size: 0.8rem;
+                    letter-spacing: 1px;
+                }
+
+                .sinopse {
+                    color: #ccc;
+                    line-height: 1.5;
+                    max-width: 500px;
+                    font-size: 0.95rem;
+                }
+            }
+        }
+    }
+}
+
+.stats-panel {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    background: #252525;
+    padding: 1.5rem;
+    border-bottom: 1px solid #333;
+
+    .stat-box {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+
+        .value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: white;
+        }
+
+        .label {
+            font-size: 0.75rem;
+            color: #888;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+    }
+}
+
+.reviews-section {
+    padding: 2rem;
+
+    h3 {
+        margin-top: 0;
+        margin-bottom: 1.5rem;
+        color: #ffc107;
+    }
+
+    .reviews-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+}
+
+.review-card {
+    background: #2a2a2a;
+    border-radius: 12px;
+    padding: 1.5rem;
+
+    .review-user {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 1rem;
+
+        .mini-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #444;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+
+            .nick {
+                font-weight: bold;
+            }
+
+            .nota {
+                font-size: 0.85rem;
+                color: #aaa;
+
+                strong {
+                    color: #ffc107;
+                }
+            }
+        }
+
+        .rewatch-icon {
+            margin-left: auto;
+            font-size: 1.2rem;
+        }
+    }
+
+    .ponto-alto {
+        background: rgba(255, 193, 7, 0.1);
+        border-left: 3px solid #ffc107;
+        padding: 10px;
+        font-style: italic;
+        color: #eee;
+        margin-bottom: 10px;
+    }
+
+    .comentario {
+        color: #bbb;
+        line-height: 1.6;
+        font-size: 0.95rem;
+        margin: 0;
+    }
+}
+
+.clickable-user {
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+
+    &:hover {
+        opacity: 0.8;
+        transform: scale(1.02);
+
+        strong,
+        .nick {
+            color: #00ff88;
+            text-decoration: underline;
+        }
+
+        .mini-avatar {
+            border: 2px solid #00ff88;
+        }
+    }
+}
+
+/* ========================================= */
+/* MEDIA QUERIES (MOBILE RESPONSIVO FIX)     */
+/* ========================================= */
+@media (max-width: 768px) {
+    .modal-overlay {
+        padding: 1rem 0;
+        /* Menos margem na tela no mobile */
+    }
+
+    .modal-raiox {
+        width: 100%;
+        margin-bottom: 0;
+        border-radius: 0;
+        /* Remove as bordas para grudar na tela */
+        min-height: 100vh;
+    }
+
+    .modal-hero {
+        height: auto;
+        /* Permite crescer com o conteúdo */
+        padding-top: 50px;
+
+        .hero-content {
+            position: relative;
+            /* O SEGREDO QUE CORRIGE O BUG DAS CAMADAS */
+            padding: 1.5rem 1rem;
+        }
+
+        .hero-main {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 1rem;
+
+            .modal-poster {
+                width: 130px;
+                display: block;
+                /* O segredo para centralizar perfeitamente ao meio: */
+                margin: 0 auto 0.5rem auto;
+            }
+
+            .hero-text {
+                h2 {
+                    font-size: 1.8rem;
+                }
+
+                .sinopse {
+                    font-size: 0.9rem;
+                }
+            }
+        }
+    }
+
+    .stats-panel {
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .reviews-section {
+        padding: 1.5rem 1rem;
+    }
+}

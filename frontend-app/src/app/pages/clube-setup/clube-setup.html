@@ -1,0 +1,55 @@
+<div class="setup-container">
+  <div class="setup-card">
+    <h2>Bem-vindo!</h2>
+    <p class="subtitle">Você ainda não participa de nenhum Clube de Filmes.</p>
+
+    <div class="tabs">
+      <button 
+        [class.active]="activeTab === 'criar'" 
+        (click)="activeTab = 'criar'; errorMessage = ''">
+        Criar Novo Clube
+      </button>
+      <button 
+        [class.active]="activeTab === 'entrar'" 
+        (click)="activeTab = 'entrar'; errorMessage = ''">
+        Tenho um Código
+      </button>
+    </div>
+
+    <div *ngIf="activeTab === 'criar'" class="tab-content">
+      <div class="form-group">
+        <label>Nome do Clube</label>
+        <input type="text" [(ngModel)]="novoClube.nome" placeholder="Ex: Cinéfilos da Madrugada">
+      </div>
+
+      <div class="form-group">
+        <label>Descrição (Opcional)</label>
+        <textarea [(ngModel)]="novoClube.descricao" placeholder="Qual o foco do grupo?"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>URL da Foto (Opcional)</label>
+        <input type="text" [(ngModel)]="novoClube.foto_clube" placeholder="http://...">
+      </div>
+
+      <button class="btn-primary" (click)="onCriar()" [disabled]="isLoading">
+        {{ isLoading ? 'Criando...' : 'Criar Clube' }}
+      </button>
+    </div>
+
+    <div *ngIf="activeTab === 'entrar'" class="tab-content">
+      <div class="form-group">
+        <label>Código de Acesso</label>
+        <input type="text" [(ngModel)]="codigoConvite" placeholder="Ex: A1B2" class="code-input">
+        <small>Peça o código ao administrador do clube.</small>
+      </div>
+
+      <button class="btn-secondary" (click)="onEntrar()" [disabled]="isLoading">
+        {{ isLoading ? 'Entrando...' : 'Entrar no Clube' }}
+      </button>
+    </div>
+
+    <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+  </div>
+</div>

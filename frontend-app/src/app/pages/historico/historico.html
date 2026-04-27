@@ -1,0 +1,94 @@
+<div class="calendar-container">
+  <header class="calendar-header">
+    <button class="nav-btn" (click)="mudarAno(-1)" [disabled]="anoSelecionado <= minAno">❮</button>
+    <h1 class="year-display">{{ anoSelecionado }}</h1>
+    <button class="nav-btn" (click)="mudarAno(1)" [disabled]="anoSelecionado >= maxAno">❯</button>
+  </header>
+
+  <div class="calendar-grid">
+    <div *ngFor="let mes of meses" class="month-card" [class.active]="mes.dados !== null" (click)="abrirMes(mes)">
+      <span class="month-number">{{ mes.numero | number:'2.0' }}</span>
+      <div class="month-info">
+        <h3>{{ mes.nome }}</h3>
+
+        <ng-container *ngIf="mes.dados; else semCiclo">
+          <p class="theme-label" *ngIf="mes.dados.tema">
+            🎭 {{ mes.dados.tema }}
+          </p>
+          <span class="status-label open" *ngIf="mes.dados.status === 'ABERTO'">🔓 Aberto</span>
+          <span class="status-label" *ngIf="mes.dados.status !== 'ABERTO'">🔒 Finalizado</span>
+        </ng-container>
+
+        <ng-template #semCiclo>
+          <span class="status-label">🔒 Sem atividade</span>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" *ngIf="mostrarModalGestao">
+    <div class="modal-gestao" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <h2>{{ mesSelecionadoNome }} {{ anoSelecionado }}</h2>
+        <button class="btn-close" (click)="mostrarModalGestao = false">✖</button>
+      </header>
+
+      <div class="modal-body" *ngIf="cicloSelecionado?.id; else semCicloModal">
+
+        <div class="admin-panel" *ngIf="souAdmin">
+          <div class="settings-row">
+            <div class="input-group">
+              <label>TEMA DO MÊS</label>
+              <input type="text" [(ngModel)]="cicloSelecionado.tema" placeholder="Ex: Clássicos do Terror">
+            </div>
+            <div class="input-group">
+              <label>STATUS DO CICLO</label>
+              <select [(ngModel)]="cicloSelecionado.status">
+                <option value="ABERTO">ABERTO (Permite trocas)</option>
+                <option value="FECHADO">FECHADO (Apenas leitura)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="admin-actions">
+            <button class="btn-update-main" (click)="salvarAlteracoesAdmin()">Atualizar Ciclo</button>
+            <button class="btn-delete-main" (click)="limparCicloAdmin()">Limpar Ciclo</button>
+          </div>
+        </div>
+
+        <div class="slots-grid">
+          <div class="slot-card-admin" *ngFor="let slot of cicloSelecionado.slots">
+            <div class="slot-header">
+              <span class="pos">Slot #{{ slot.posicao }}</span>
+              <span class="user">@{{ slot.user.nickname }}</span>
+            </div>
+
+            <div class="slot-visual">
+              <div *ngIf="slot.filme" class="poster-container">
+                <img [src]="slot.filme.poster" alt="Poster">
+
+                <div class="admin-actions-overlay" *ngIf="souAdmin && cicloSelecionado.status !== 'FECHADO'">
+                  <button class="action-btn delete" (click)="removerFilmeAdmin(slot)" title="Remover Filme">🗑️</button>
+                </div>
+              </div>
+
+              <div *ngIf="!slot.filme" class="empty-state">
+                <div class="icon">⏳</div>
+                <p>Aguardando indicação...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <ng-template #semCicloModal>
+        <div class="empty-modal-state">
+          <div class="icon">📅</div>
+          <p>Nenhum ciclo ativo para este período.</p>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+
+</div>

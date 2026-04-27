@@ -1,0 +1,212 @@
+<div class="profile-container" *ngIf="!isLoading && dados; else loading">
+
+    <header class="profile-header">
+        <div class="cover-image"></div>
+        <div class="profile-info-card">
+            <div class="avatar-area">
+                <img *ngIf="dados.user?.url_foto_perfil" [src]="dados.user.url_foto_perfil"
+                    (error)="dados.user.url_foto_perfil = null" alt="Avatar" class="avatar-img">
+                <div *ngIf="!dados.user?.url_foto_perfil" class="avatar-letter">
+                    {{ dados.user?.nickname?.charAt(0)?.toUpperCase() }}
+                </div>
+                <button class="btn-edit" *ngIf="isOwner" (click)="abrirEdicao()">✎</button>
+            </div>
+            <h1 class="nickname">{{ dados.user?.nickname }}</h1>
+            <p class="email" *ngIf="isOwner">{{ dados.user?.email }}</p>
+            <span class="member-since">Membro desde {{ dados.user?.created_at | date:'yyyy' }}</span>
+        </div>
+    </header>
+
+    <section class="top-dashboard">
+        <div class="dash-card club-card" *ngIf="dados.clube">
+            <div class="card-icon">🎬</div>
+            <div class="card-info">
+                <h3>{{ dados.clube.nome }}</h3>
+                <div class="code-box">Código: <span>{{ dados.clube.codigo }}</span></div>
+            </div>
+        </div>
+
+        <div class="dash-card stats-card">
+            <div class="stat-item">
+                <span class="value">{{ dados.stats?.total_avaliacoes || 0 }}</span>
+                <span class="label">Críticas</span>
+            </div>
+            <div class="divider"></div>
+            <div class="stat-item">
+                <span class="value">{{ dados.stats?.total_filmes_assistidos || 0 }}</span>
+                <span class="label">Assistidos</span>
+            </div>
+        </div>
+
+        <div class="dash-card friends-card" *ngIf="dados.amigos && dados.amigos.length > 0">
+            <h3>Aliados ({{ dados.amigos.length }})</h3>
+            <div class="avatar-group">
+                <div class="friend-avatar" *ngFor="let amigo of getPrimeirosAmigos()" [title]="amigo?.nickname"
+                    (click)="irParaPerfil(amigo.id)" style="cursor: pointer;">
+                    <img *ngIf="amigo?.url_foto_perfil" [src]="amigo.url_foto_perfil">
+                    <span *ngIf="!amigo?.url_foto_perfil">{{ amigo?.nickname?.charAt(0)?.toUpperCase() }}</span>
+                </div>
+                <div class="friend-avatar more" *ngIf="dados.amigos.length > 5">+{{ dados.amigos.length - 5 }}</div>
+            </div>
+        </div>
+    </section>
+
+    <nav class="profile-tabs">
+        <button [class.active]="abaAtiva === 'avaliacoes'" (click)="mudarAba('avaliacoes')">
+            📝 {{ isOwner ? 'Minhas Avaliações' : 'Avaliações' }}
+        </button>
+        <button [class.active]="abaAtiva === 'recados'" (click)="mudarAba('recados')">
+            📬 Correio Cinéfilo
+            <span class="badge" *ngIf="dados.recados_recebidos?.length">{{ dados.recados_recebidos?.length }}</span>
+        </button>
+        <button [class.active]="abaAtiva === 'conquistas'" (click)="mudarAba('conquistas')">
+            🏆 Conquistas
+        </button>
+        <button *ngIf="souAdmin && isOwner" [class.active]="abaAtiva === 'discord'" (click)="mudarAba('discord')">
+            👑 Painel Admin
+        </button>
+    </nav>
+
+    <main class="tab-content-area">
+
+        <section *ngIf="abaAtiva === 'avaliacoes'" class="fade-in">
+            <div class="reviews-feed">
+                <div class="review-item" *ngFor="let av of dados.avaliacoes">
+                    <div class="movie-poster">
+                        <img [src]="av.filme?.poster" alt="Poster" *ngIf="av.filme?.poster">
+                        <div class="no-poster" *ngIf="!av.filme?.poster">🎬</div>
+                    </div>
+                    <div class="review-content">
+                        <div class="review-header">
+                            <div class="title-group">
+                                <h4 class="movie-title">{{ av.filme?.titulo }}</h4>
+                                <span class="year">({{ av.filme?.ano }})</span>
+                            </div>
+                            <div class="rating-badge">⭐ {{ av.nota }}</div>
+                        </div>
+                        <div class="badges-mini" *ngIf="av.assistiria_novamente">
+                            <span class="rewatch-badge">↺ Assistiria Novamente</span>
+                        </div>
+                        <p class="review-text">"{{ av.comentario }}"</p>
+                        <div class="highlight-box" *ngIf="av.destaque">
+                            🔥 <strong>Destaque:</strong> {{ av.destaque }}
+                        </div>
+                        <span class="date">{{ av.created_at | date:'dd/MM/yyyy' }}</span>
+                    </div>
+                </div>
+
+                <div *ngIf="!dados.avaliacoes || dados.avaliacoes.length === 0" class="empty-state">
+                    <div class="icon">🍿</div>
+                    <p>{{ isOwner ? 'Você ainda não avaliou nenhum filme. Corra para o sofá!' : 'Este usuário ainda não
+                        avaliou nenhum filme.' }}</p>
+                </div>
+            </div>
+        </section>
+
+        <section *ngIf="abaAtiva === 'recados'" class="fade-in">
+            <div class="recados-grid">
+                <div class="recado-card" *ngFor="let recado of dados.recados_recebidos">
+                    <div class="recado-top">
+                        <span class="filme-alvo">🎬 {{ recado.filme_titulo }}</span>
+                        <span class="nota-amigo">Nota: {{ recado.nota }}</span>
+                    </div>
+                    <div class="balao-recado">
+                        "{{ recado.texto }}"
+                    </div>
+                    <div class="remetente">
+                        — Enviado por <strong>{{ recado.autor }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div *ngIf="!dados.recados_recebidos || dados.recados_recebidos.length === 0" class="empty-state">
+                <div class="icon">📭</div>
+                <p>Ninguém enviou mensagens sobre as indicações ainda.</p>
+            </div>
+        </section>
+
+        <section *ngIf="abaAtiva === 'conquistas'" class="fade-in">
+            <div class="conquistas-grid">
+                <div class="conquista-card" [class.locked]="!dados.conquistas?.primeiro_play">
+                    <div class="icone">{{ dados.conquistas?.primeiro_play ? '🏆' : '🔒' }}</div>
+                    <h4>O Primeiro Play</h4>
+                    <p>Avalie o seu primeiro filme.</p>
+                </div>
+
+                <div class="conquista-card" [class.locked]="!dados.conquistas?.cinefilo_veterano">
+                    <div class="icone">{{ dados.conquistas?.cinefilo_veterano ? '🎖️' : '🔒' }}</div>
+                    <h4>Cinéfilo Veterano</h4>
+                    <p>Avalie 10 filmes no clube.</p>
+                </div>
+
+                <div class="conquista-card" [class.locked]="!dados.conquistas?.curador_polemico">
+                    <div class="icone">{{ dados.conquistas?.curador_polemico ? '🧨' : '🔒' }}</div>
+                    <h4>Curador Polêmico</h4>
+                    <p>Indique um filme que dividiu opiniões (Mín. 3 notas com 2.5 de diferença).</p>
+                </div>
+            </div>
+
+            <p *ngIf="!dados.conquistas?.primeiro_play && isOwner" class="coming-soon-text">
+                Assista ao seu primeiro filme para começar a desbloquear troféus!
+            </p>
+        </section>
+
+        <section *ngIf="abaAtiva === 'discord' && isOwner" class="fade-in">
+            <h2 class="section-title" style="color: #00ff88; border-left-color: #00ff88;">
+                👑 Painel de Administração
+            </h2>
+
+            <div class="admin-wrapper">
+
+                <div class="admin-simple-card">
+                    <div class="card-text">
+                        <h3>📅 Gestão de Ciclos</h3>
+                        <p>Gerencie meses, temas e encerre votações do clube.</p>
+                    </div>
+                    <button class="btn-goto" (click)="irParaCalendario()">Acessar Calendário</button>
+                </div>
+
+                <div class="discord-card">
+                    <h3>👾 O Oráculo (Discord)</h3>
+                    <p class="desc">
+                        Conecte o seu Clube ao Discord. O Oráculo avisará automaticamente a todos quando um ciclo for
+                        aberto, um filme for indicado ou uma nova crítica for postada!
+                    </p>
+
+                    <div class="input-group">
+                        <label>URL DO WEBHOOK</label>
+                        <input type="text" [(ngModel)]="webhookUrl" placeholder="https://discord.com/api/webhooks/...">
+                        <small *ngIf="webhookUrl" class="status-ok">✔ Oráculo conectado e ativo!</small>
+                    </div>
+
+                    <button class="btn-discord" (click)="salvarWebhook()">Salvar Integração</button>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <div class="modal-overlay" *ngIf="mostrarModalEdit && isOwner">
+        <div class="modal-content">
+            <h3>Editar Perfil</h3>
+            <div class="input-group">
+                <label>Nickname</label>
+                <input type="text" [(ngModel)]="formEdit.nickname">
+            </div>
+            <div class="input-group">
+                <label>URL da Foto (Avatar)</label>
+                <input type="text" [(ngModel)]="formEdit.url_foto_perfil">
+                <small>Deixe vazio para usar a letra inicial.</small>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" (click)="fecharEdicao()">Cancelar</button>
+                <button class="btn-save" (click)="salvarEdicao()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<ng-template #loading>
+    <div class="loading-screen">Carregando Perfil...</div>
+</ng-template>

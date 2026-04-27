@@ -1,0 +1,14 @@
+.app-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    /* Ocupa 100% da altura da tela */
+    background-color: #121212;
+    /* Fundo preto global */
+}
+
+.page-content {
+    flex: 1;
+    /* Ocupa todo o espaço disponível, empurrando o footer */
+    width: 100%;
+}

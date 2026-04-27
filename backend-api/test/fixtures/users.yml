@@ -1,0 +1,23 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  nome: MyString
+  nickname: MyString
+  email: MyString
+  password_digest: MyString
+  url_foto_perfil: MyString
+  pontos_total: MyString
+  data_cadastro: 2026-01-05
+  ativo: false
+  tipo_enum: 1
+
+two:
+  nome: MyString
+  nickname: MyString
+  email: MyString
+  password_digest: MyString
+  url_foto_perfil: MyString
+  pontos_total: MyString
+  data_cadastro: 2026-01-05
+  ativo: false
+  tipo_enum: 1

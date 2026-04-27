@@ -1,0 +1,17 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  numero_semana: 1
+  data_inicio_semana: 2026-01-06
+  data_fim_semana: 2026-01-06
+  nome_tema_semana: MyText
+  filme: one
+  clube: one
+
+two:
+  numero_semana: 1
+  data_inicio_semana: 2026-01-06
+  data_fim_semana: 2026-01-06
+  nome_tema_semana: MyText
+  filme: two
+  clube: two

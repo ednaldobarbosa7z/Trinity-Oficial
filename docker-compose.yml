@@ -1,0 +1,46 @@
+version: "3.8"
+
+services:
+  # --- 1. BANCO DE DADOS (POSTGRESQL) ---
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      # Lendo do arquivo .env da raiz
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    ports:
+      - "5435:5432"
+
+  # --- 2. BACKEND (RUBY ON RAILS) ---
+  api:
+    build: ./backend-api
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 3000 -b
+      '0.0.0.0'"
+    volumes:
+      - ./backend-api:/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    environment:
+      DATABASE_HOST: db
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      # URL do frontend para o CORS (lida do .env)
+      FRONTEND_URL: ${FRONTEND_URL}
+
+  # --- 3. FRONTEND (ANGULAR) ---
+  web:
+    build: ./frontend-app
+    volumes:
+      - ./frontend-app:/app
+      - /app/node_modules
+    ports:
+      - "4200:4200"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
