@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core'; // <--- IMPORTADO AQUI
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -18,6 +18,9 @@ export class NavbarComponent implements OnInit {
   usuario: any = { nickname: 'Visitante', foto: null };
   souAdmin = false;
 
+  // --- NOVA VARIÁVEL AQUI ---
+  clubeId: number | string | null = null;
+
   // Controle de visibilidade
   exibirNavbar = true;
   isSetupPage = false;
@@ -26,7 +29,7 @@ export class NavbarComponent implements OnInit {
     private authService: AuthService,
     private router: Router,
     private clubeService: ClubeService,
-    private cdr: ChangeDetectorRef // <--- INJETADO NO CONSTRUTOR
+    private cdr: ChangeDetectorRef
   ) {
     this.verificarUrl(this.router.url);
 
@@ -36,8 +39,6 @@ export class NavbarComponent implements OnInit {
       const urlFinal = event.urlAfterRedirects || event.url;
       this.verificarUrl(urlFinal);
 
-      // Quando muda de rota, forçamos a verificação novamente para garantir
-      // que o estado (Admin) está atualizado e redesenhamos a Navbar.
       if (this.exibirNavbar && !this.isSetupPage) {
         this.verificarPermissaoAdmin();
       }
@@ -71,9 +72,14 @@ export class NavbarComponent implements OnInit {
   verificarPermissaoAdmin() {
     this.clubeService.getMeuClube().subscribe({
       next: (res: any) => {
-        // Atualiza a variável e ACORDA a Navbar imediatamente
         this.souAdmin = res.sou_admin;
-        this.cdr.detectChanges(); // <--- A MÁGICA ACONTECE AQUI
+
+        // --- CAPTURANDO O ID DO CLUBE ---
+        // Dependendo de como sua API responde, o ID pode vir como res.id, res.clube_id ou res.clube.id. 
+        // Essa linha tenta pegar o correto automaticamente:
+        this.clubeId = res.id || res.clube_id || (res.clube && res.clube.id);
+
+        this.cdr.detectChanges();
       },
       error: (err) => console.error('Erro ao buscar status de admin', err)
     });

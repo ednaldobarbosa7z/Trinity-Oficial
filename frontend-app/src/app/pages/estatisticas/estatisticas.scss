@@ -1,0 +1,282 @@
+.estatisticas-container {
+    padding: 2rem;
+    color: #ffffff;
+    max-width: 1100px;
+    margin: 0 auto;
+
+    .page-header {
+        text-align: center;
+        margin-bottom: 3rem;
+
+        h1 {
+            font-size: 2.5rem;
+            margin: 0;
+        }
+
+        .subtitle {
+            color: #a0a0b0;
+            font-size: 1.2rem;
+            margin-top: 0.5rem;
+        }
+    }
+
+    // --- O PÓDIO ---
+    .podio-section {
+        margin-bottom: 4rem;
+
+        h2 {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            color: #ffd700;
+        }
+
+        .podio {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 1.5rem;
+            height: 420px; // 1. Aumentamos a altura (era 380px) para dar respiro
+
+            .podio-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                width: 180px;
+                background: #1e1e2f;
+                padding: 1rem;
+                border-radius: 16px 16px 0 0;
+                position: relative;
+                transition: transform 0.3s ease;
+                box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+
+                &:hover {
+                    transform: translateY(-10px);
+                }
+
+                .poster {
+                    width: 100%;
+                    aspect-ratio: 2 / 3; // 2. Força proporção perfeita de cinema
+                    object-fit: cover; // Corta as sobras sem distorcer a imagem
+                    border-radius: 8px;
+                    margin-bottom: 0.8rem;
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+                }
+
+                .titulo {
+                    font-weight: bold;
+                    text-align: center;
+                    margin: 0.2rem 0;
+                    font-size: 0.95rem;
+                    line-height: 1.2;
+                    min-height: 2.4em; // 3. Reserva espaço fixo para 2 linhas sempre
+
+                    white-space: normal;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 2;
+                    -webkit-box-orient: vertical;
+                    overflow: hidden;
+                    width: 100%;
+                }
+
+                .nota {
+                    font-size: 1.2rem;
+                    font-weight: bold;
+                    color: #f1c40f;
+                    margin-top: auto; // Empurra a nota sempre pro final do card
+                }
+
+                .rank-badge {
+                    position: absolute;
+                    top: -20px;
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    font-size: 1.2rem;
+                    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+                    z-index: 2;
+                }
+            }
+
+            // Alturas e cores do pódio
+            .gold {
+                height: 100%;
+                background: linear-gradient(180deg, #2a2a40 0%, #1e1e2f 100%);
+                border-top: 4px solid #ffd700;
+
+                .rank-badge {
+                    background: #ffd700;
+                    color: #1a1a2e;
+                }
+
+                .poster {
+                    width: 110%;
+                    margin-top: -10px;
+                }
+            }
+
+            .silver {
+                height: 85%;
+                border-top: 4px solid #c0c0c0;
+
+                .rank-badge {
+                    background: #c0c0c0;
+                    color: #1a1a2e;
+                }
+            }
+
+            .bronze {
+                height: 75%;
+                border-top: 4px solid #cd7f32;
+
+                .rank-badge {
+                    background: #cd7f32;
+                    color: #ffffff;
+                }
+            }
+        }
+    }
+
+    // --- GRID INFERIOR ---
+    .grid-estatisticas {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 2rem;
+
+        .card {
+            background: #1a1a2e;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+
+            h2 {
+                margin-top: 0;
+            }
+
+            .desc {
+                color: #a0a0b0;
+                font-size: 0.9rem;
+                margin-bottom: 1.5rem;
+            }
+        }
+
+        .pior-filme-content {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+
+            img {
+                width: 100px;
+                border-radius: 8px;
+            }
+
+            .nota-ruim {
+                color: #ff4757;
+                font-size: 1.5rem;
+                font-weight: bold;
+                display: block;
+                margin: 0.5rem 0;
+            }
+        }
+
+        .user-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+
+            li {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                background: #232336;
+                padding: 0.8rem 1rem;
+                border-radius: 8px;
+                margin-bottom: 0.8rem;
+
+                .user-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+
+                    .posicao {
+                        font-weight: bold;
+                        color: #a0a0b0;
+                        width: 20px;
+                    }
+
+                    // Estilo do novo Avatar Redondo
+                    .avatar-circle {
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 50%;
+                        background-color: #333344; // Fundo escuro elegante
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        overflow: hidden;
+                        flex-shrink: 0;
+
+                        .avatar-img {
+                            width: 100%;
+                            height: 100%;
+                            object-fit: cover;
+                        }
+
+                        .avatar-letter {
+                            color: #ffffff;
+                            font-weight: bold;
+                            font-size: 1.2rem;
+                        }
+                    }
+
+                    .nickname {
+                        font-weight: bold;
+                    }
+                }
+
+                .user-stats {
+                    text-align: right;
+
+                    .media-dada {
+                        display: block;
+                        font-weight: bold;
+                        color: #2ecc71;
+                    }
+
+                    .total-avaliacoes {
+                        font-size: 0.8rem;
+                        color: #a0a0b0;
+                    }
+                }
+            }
+        }
+    }
+}
+
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 50vh;
+    color: #fff;
+
+    .spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #232336;
+        border-top-color: #ffd700;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1rem;
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

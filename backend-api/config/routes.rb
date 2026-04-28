@@ -63,4 +63,8 @@ Rails.application.routes.draw do
   resources :ciclos, only: [] do
     resources :reunioes, only: [:create, :destroy]
   end
+
+  resources :clubes do
+  get 'statistics', to: 'statistics#index'
+end
 end

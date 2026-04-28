@@ -1,0 +1,81 @@
+<div class="estatisticas-container" *ngIf="!carregando; else loading">
+
+    <header class="page-header">
+        <h1>Estatísticas do Clube</h1>
+        <p class="subtitle">{{ estatisticas?.clube }}</p>
+    </header>
+
+    <section class="podio-section" *ngIf="estatisticas?.top_10?.length">
+        <h2>🏆 Pódio (Top 3)</h2>
+
+        <div class="podio">
+            <div class="podio-item silver" *ngIf="estatisticas?.top_10?.[1] as filme2">
+                <div class="rank-badge">2º</div>
+                <img [src]="filme2.poster" alt="{{ filme2.titulo }}" class="poster">
+                <p class="titulo" title="{{ filme2.titulo }}">{{ filme2.titulo }}</p>
+                <span class="nota">⭐ {{ filme2.media }}</span>
+            </div>
+
+            <div class="podio-item gold" *ngIf="estatisticas?.top_10?.[0] as filme1">
+                <div class="rank-badge">1º</div>
+                <img [src]="filme1.poster" alt="{{ filme1.titulo }}" class="poster">
+                <p class="titulo" title="{{ filme1.titulo }}">{{ filme1.titulo }}</p>
+                <span class="nota">⭐ {{ filme1.media }}</span>
+            </div>
+
+            <div class="podio-item bronze" *ngIf="estatisticas?.top_10?.[2] as filme3">
+                <div class="rank-badge">3º</div>
+                <img [src]="filme3.poster" alt="{{ filme3.titulo }}" class="poster">
+                <p class="titulo" title="{{ filme3.titulo }}">{{ filme3.titulo }}</p>
+                <span class="nota">⭐ {{ filme3.media }}</span>
+            </div>
+        </div>
+    </section>
+
+    <div class="grid-estatisticas">
+        <div class="card pior-filme" *ngIf="estatisticas?.pior_filme">
+            <h2>🍅 O Pior Filme</h2>
+            <div class="pior-filme-content">
+                <img [src]="estatisticas?.pior_filme?.poster" alt="Pior Filme">
+                <div class="info">
+                    <h3>{{ estatisticas?.pior_filme?.titulo }}</h3>
+                    <span class="nota-ruim">⭐ {{ estatisticas?.pior_filme?.media }}</span>
+                    <p>Este foi o que a galera menos curtiu...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card generosos">
+            <h2>💸 Os Mais Generosos</h2>
+            <p class="desc">Quem tem o coração mole na hora de avaliar?</p>
+
+            <ul class="user-list">
+                <li *ngFor="let user of estatisticas?.mais_generosos; let i = index">
+                    <div class="user-info">
+                        <span class="posicao">{{ i + 1 }}º</span>
+
+                        <div class="avatar-circle">
+                            <img *ngIf="user.foto_perfil" [src]="user.foto_perfil" class="avatar-img">
+                            <span *ngIf="!user.foto_perfil" class="avatar-letter">{{
+                                user.nickname?.charAt(0)?.toUpperCase() }}</span>
+                        </div>
+
+                        <span class="nickname">{{ user.nickname }}</span>
+                    </div>
+                    <div class="user-stats">
+                        <span class="media-dada">Média: {{ user.media_dada }}</span>
+                        <span class="total-avaliacoes">({{ user.total_avaliacoes }} avaliações)</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+</div>
+
+<ng-template #loading>
+    <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Calculando o ranking...</p>
+    </div>
+</ng-template>

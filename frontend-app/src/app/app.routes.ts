@@ -7,6 +7,7 @@ import { AdicionarFilmeComponent } from './pages/adicionar-filme/adicionar-filme
 import { HistoricoCiclosComponent } from './pages/historico/historico';
 import { CatalogoFilmesComponent } from './components/catalogo-filmes/catalogo-filmes';
 import { UserProfileComponent } from './components/user-profile/user-profile';
+import { EstatisticasComponent } from './pages/estatisticas/estatisticas';
 
 export const routes: Routes = [
   {
@@ -43,6 +44,10 @@ export const routes: Routes = [
     component: UserProfileComponent
   },
   { path: 'filmes', component: CatalogoFilmesComponent },
+  {
+    path: 'clube/:id/estatisticas',
+    component: EstatisticasComponent
+  },
   // ---------------------------
   {
     path: '',

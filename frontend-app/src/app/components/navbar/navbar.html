@@ -22,10 +22,17 @@
                     <div class="dropdown-item" (click)="navegarPara('/perfil')">
                         <span class="icon">👤</span> Meu Perfil
                     </div>
+
                     <div class="dropdown-item" (click)="navegarPara('/filmes')">
                         <span class="icon">🎬</span> Catálogo
                     </div>
+
+                    <div class="dropdown-item" (click)="navegarPara('/clube/' + clubeId + '/estatisticas')">
+                        <span class="icon">📊</span> Estatísticas
+                    </div>
+
                     <div class="divider"></div>
+
                     <div class="dropdown-item danger" (click)="logout()">
                         <span class="icon">↪</span> Sair
                     </div>
