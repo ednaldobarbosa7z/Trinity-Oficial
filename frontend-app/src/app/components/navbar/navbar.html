@@ -1,49 +1,69 @@
-<nav class="navbar" *ngIf="exibirNavbar">
-    <div class="logo-area" (click)="navegarPara('/dashboard')">
-        <img src="logo.png" alt="Clube Filme Logo" class="nav-logo">
+<header class="site-header">
+  <div class="header-inner">
+    <a routerLink="/dashboard" class="brand" aria-label="Trinity, início"
+      ><img src="/logo.png" width="158" height="58" alt="Trinity, o seu clube de filmes"
+    /></a>
+    @if (store.club(); as club) {
+      <nav class="primary-nav" aria-label="Navegação principal">
+        <a
+          routerLink="/dashboard"
+          routerLinkActive="active"
+          ariaCurrentWhenActive="page"
+          (click)="menuOpen.set(false)"
+          ><app-icon name="home" /> <span>Início</span></a
+        >
+        <a
+          routerLink="/filmes"
+          routerLinkActive="active"
+          ariaCurrentWhenActive="page"
+          (click)="menuOpen.set(false)"
+          ><app-icon name="grid" /> <span>Catálogo</span></a
+        >
+        <a
+          routerLink="/historico"
+          routerLinkActive="active"
+          ariaCurrentWhenActive="page"
+          (click)="menuOpen.set(false)"
+          ><app-icon name="calendar" /> <span>Ciclos</span></a
+        >
+        <a
+          [routerLink]="['/clube', club.id, 'estatisticas']"
+          routerLinkActive="active"
+          ariaCurrentWhenActive="page"
+          (click)="menuOpen.set(false)"
+          ><app-icon name="chart" /> <span>Estatísticas</span></a
+        >
+      </nav>
+    }
+    <div class="account">
+      <button
+        type="button"
+        class="account-trigger"
+        [attr.aria-expanded]="menuOpen()"
+        aria-controls="account-navigation"
+        (click)="menuOpen.set(!menuOpen())"
+      >
+        <app-avatar [user]="auth.user()" /><span class="account-name">{{
+          auth.user()?.nickname || 'Minha conta'
+        }}</span
+        ><app-icon name="down" [size]="15" />
+      </button>
+      @if (menuOpen()) {
+        <nav id="account-navigation" class="account-menu" aria-label="Minha conta">
+          <span class="menu-caption">Sua sessão no Trinity</span>
+          <a routerLink="/perfil" (click)="menuOpen.set(false)"
+            ><app-icon name="user" /> Meu perfil</a
+          >
+          @if (store.isAdmin()) {
+            <a routerLink="/perfil" [queryParams]="{ aba: 'clube' }" (click)="menuOpen.set(false)"
+              ><app-icon name="shield" /> Configurações do clube</a
+            >
+          }
+          <button type="button" class="logout" (click)="menuOpen.set(false); auth.logout()">
+            <app-icon name="logout" /> Sair da conta
+          </button>
+        </nav>
+      }
     </div>
-
-    <div class="nav-links">
-        <ng-container *ngIf="!isSetupPage">
-            <div class="profile-dropdown">
-                <div class="profile-header" (click)="toggleMenu()">
-                    <button class="btn-notification">🔔</button>
-
-                    <div class="avatar-circle">
-                        <img *ngIf="usuario.foto" [src]="usuario.foto" alt="Avatar">
-                        <span *ngIf="!usuario.foto">{{ usuario.nickname?.charAt(0)?.toUpperCase() }}</span>
-                    </div>
-
-                    <span class="username">{{ usuario.nickname }}</span>
-                    <span class="arrow">▼</span>
-                </div>
-
-                <div class="dropdown-menu" *ngIf="menuAberto">
-                    <div class="dropdown-item" (click)="navegarPara('/perfil')">
-                        <span class="icon">👤</span> Meu Perfil
-                    </div>
-
-                    <div class="dropdown-item" (click)="navegarPara('/filmes')">
-                        <span class="icon">🎬</span> Catálogo
-                    </div>
-
-                    <div class="dropdown-item" (click)="navegarPara('/clube/' + clubeId + '/estatisticas')">
-                        <span class="icon">📊</span> Estatísticas
-                    </div>
-
-                    <div class="divider"></div>
-
-                    <div class="dropdown-item danger" (click)="logout()">
-                        <span class="icon">↪</span> Sair
-                    </div>
-                </div>
-            </div>
-        </ng-container>
-
-        <ng-container *ngIf="isSetupPage">
-            <button class="btn-simple-logout" (click)="logout()">
-                Sair
-            </button>
-        </ng-container>
-    </div>
-</nav>
+  </div>
+</header>

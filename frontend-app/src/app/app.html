@@ -1,11 +1,24 @@
-<div class="app-layout">
-
-    <app-navbar *ngIf="mostrarMenu"></app-navbar>
-
-    <div class="page-content">
-        <router-outlet></router-outlet>
+<a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+@if (!authPage()) {
+  <app-navbar />
+}
+<main id="conteudo" tabindex="-1" [class.auth-main]="authPage()"><router-outlet /></main>
+@if (!authPage()) {
+  <app-footer />
+}
+<div class="toast-stack" aria-live="polite" aria-relevant="additions">
+  @for (notice of notices.notices(); track notice.id) {
+    <div class="toast" [class.toast-error]="notice.kind === 'error'">
+      <app-icon [name]="notice.kind === 'error' ? 'alert' : 'check'" />
+      <p>{{ notice.message }}</p>
+      <button
+        type="button"
+        class="icon-button"
+        aria-label="Dispensar mensagem"
+        (click)="notices.dismiss(notice.id)"
+      >
+        <app-icon name="close" [size]="16" />
+      </button>
     </div>
-
-    <app-footer *ngIf="mostrarMenu"></app-footer>
-
+  }
 </div>

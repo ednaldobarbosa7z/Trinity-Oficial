@@ -1,0 +1,13 @@
+node_modules
+.angular
+dist
+coverage
+.git
+.env*
+src/environments/environment.ts
+npm-debug.log*
+.cache
+test-results
+playwright-report
+e2e
+playwright.config.ts

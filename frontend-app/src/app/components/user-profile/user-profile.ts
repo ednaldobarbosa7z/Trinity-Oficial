@@ -1,192 +1,226 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { UserService } from '../../services/user.service';
-import { ClubeService } from '../../services/clube';
-import Swal from 'sweetalert2';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { DatePipe, DecimalPipe } from '@angular/common';
+import {
+  FormBuilder,
+  ReactiveFormsModule,
+  Validators,
+  AbstractControl,
+  ValidationErrors,
+} from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Subject, catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ApiService } from '../../services/api.service';
+import { AuthService } from '../../services/auth.service';
+import { ClubStore } from '../../services/club-store.service';
+import { NotificationsService } from '../../services/notifications.service';
+import { Profile } from '../../models/api.models';
+import { errorMessage } from '../../core/utils';
+import {
+  AvatarComponent,
+  ConfirmComponent,
+  DialogComponent,
+  FieldErrorComponent,
+  IconComponent,
+  PaginationComponent,
+  PosterDirective,
+  StateComponent,
+} from '../../shared/ui';
 
+export function discordUrlValidator(control: AbstractControl): ValidationErrors | null {
+  if (!control.value) return null;
+  try {
+    const url = new URL(String(control.value));
+    return url.protocol === 'https:' &&
+      ['discord.com', 'discordapp.com'].includes(url.hostname) &&
+      (!url.port || url.port === '443') &&
+      !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash &&
+      /^\/api(?:\/v\d+)?\/webhooks\/\d+\/[A-Za-z0-9_-]+$/.test(url.pathname)
+      ? null
+      : { discordUrl: true };
+  } catch {
+    return { discordUrl: true };
+  }
+}
 @Component({
   selector: 'app-user-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    DatePipe,
+    DecimalPipe,
+    AvatarComponent,
+    ConfirmComponent,
+    DialogComponent,
+    FieldErrorComponent,
+    IconComponent,
+    PaginationComponent,
+    PosterDirective,
+    StateComponent,
+  ],
   templateUrl: './user-profile.html',
-  styleUrls: ['./user-profile.scss']
+  styleUrl: './user-profile.scss',
 })
 export class UserProfileComponent implements OnInit {
-  isLoading = true;
-  dados: any = null;
-  isOwner = true;
-  mostrarModalEdit = false;
-  formEdit = {
-    nickname: '',
-    url_foto_perfil: ''
-  };
-
-  abaAtiva: string = 'avaliacoes';
-  souAdmin = false;
-  webhookUrl = '';
-
-  constructor(
-    private userService: UserService,
-    private clubeService: ClubeService,
-    private cdr: ChangeDetectorRef,
-    private router: Router,
-    private route: ActivatedRoute
-  ) { }
-
-  ngOnInit() {
-    // 👇 ALTERE O ngOnInit PARA ISTO 👇
-    this.route.paramMap.subscribe(params => {
-      const idDaUrl = params.get('id');
-
-      if (idDaUrl) {
-        // Se tem ID na URL, estamos visitando alguém
-        this.isOwner = false;
-        this.carregarPerfilPublico(idDaUrl);
-      } else {
-        // Se não tem ID, é a rota /perfil normal (O meu perfil)
-        this.isOwner = true;
-        this.carregarPerfil();
-        this.verificarAdminEDiscord();
-      }
-    });
-  }
-
-  carregarPerfilPublico(id: string) {
-    this.isLoading = true;
-    this.userService.getPerfilPublico(id).subscribe({
-      next: (res) => {
-        this.dados = res;
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Erro:', err);
-        this.isLoading = false;
-        Swal.fire('Acesso Negado', err.error?.error || 'Não foi possível ver este perfil.', 'error').then(() => {
-          this.router.navigate(['/perfil']); // Joga de volta pro próprio perfil
-        });
-      }
-    });
-  }
-
-  irParaPerfil(amigoId: number) {
-    this.router.navigate(['/perfil', amigoId]);
-  }
-
-  // --- FUNÇÃO PARA MUDAR DE ABA (CORRIGIDO) ---
-  mudarAba(aba: string) {
-    this.abaAtiva = aba;
-  }
-
-  // --- FUNÇÃO PARA EVITAR O ERRO 'UNKNOWN' DO SLICE (CORRIGIDO) ---
-  getPrimeirosAmigos(): any[] {
-    if (!this.dados || !this.dados.amigos) return [];
-    return this.dados.amigos.slice(0, 5);
-  }
-
-  verificarAdminEDiscord() {
-    this.clubeService.getMeuClube().subscribe({
-      next: (res: any) => {
-        this.souAdmin = res.sou_admin;
-        if (res.clube && res.clube.discord_webhook_url) {
-          this.webhookUrl = res.clube.discord_webhook_url;
+  readonly auth = inject(AuthService);
+  readonly store = inject(ClubStore);
+  private readonly api = inject(ApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly notices = inject(NotificationsService);
+  private readonly destroy = inject(DestroyRef);
+  private readonly fb = inject(FormBuilder);
+  readonly data = signal<Profile | null>(null);
+  readonly loading = signal(true);
+  readonly error = signal('');
+  readonly userId = signal<number | null>(null);
+  readonly page = signal(1);
+  readonly tab = signal<'avaliacoes' | 'recados' | 'clube'>('avaliacoes');
+  readonly isOwner = computed(() => !this.userId() || this.userId() === this.auth.user()?.id);
+  readonly editing = signal(false);
+  readonly saving = signal(false);
+  readonly saveError = signal('');
+  readonly discordSaving = signal(false);
+  readonly discordError = signal('');
+  readonly disconnecting = signal(false);
+  readonly form = this.fb.nonNullable.group({
+    nome: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(150)]],
+    nickname: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(50)]],
+    email: ['', [Validators.required, Validators.email, Validators.maxLength(254)]],
+    url_foto_perfil: ['', [Validators.pattern(/^https?:\/\/\S+$/i), Validators.maxLength(2048)]],
+  });
+  readonly webhook = this.fb.nonNullable.group({
+    url: ['', [Validators.required, discordUrlValidator]],
+  });
+  private readonly requests = new Subject<{ userId: number | null; page: number }>();
+  ngOnInit(): void {
+    this.requests
+      .pipe(
+        switchMap((request) => {
+          this.loading.set(true);
+          this.error.set('');
+          return this.api.profile(request.userId, request.page).pipe(
+            catchError((error: unknown) => {
+              this.error.set(errorMessage(error));
+              return of(null);
+            }),
+            finalize(() => this.loading.set(false)),
+          );
+        }),
+        takeUntilDestroyed(this.destroy),
+      )
+      .subscribe((data) => {
+        this.data.set(data);
+        if (data && this.isOwner()) this.auth.updateUser(data.user);
+      });
+    combineLatest([this.route.paramMap, this.route.queryParamMap])
+      .pipe(takeUntilDestroyed(this.destroy))
+      .subscribe(([params, query]) => {
+        const rawId = params.get('id');
+        if (rawId && !/^[1-9]\d*$/.test(rawId)) {
+          this.error.set('Este perfil não está disponível.');
+          this.loading.set(false);
+          return;
         }
-        this.cdr.detectChanges();
-      },
-      error: (err) => console.error(err)
+        const nextUserId = rawId ? Number(rawId) : null;
+        if (nextUserId !== this.userId()) {
+          this.data.set(null);
+          this.editing.set(false);
+        }
+        this.userId.set(nextUserId);
+        const tab = query.get('aba');
+        this.tab.set(
+          tab === 'recados' || (tab === 'clube' && this.isOwner() && this.store.isAdmin())
+            ? tab
+            : 'avaliacoes',
+        );
+        this.page.set(Math.max(1, Number(query.get('page')) || 1));
+        this.load();
+      });
+  }
+  load(): void {
+    this.requests.next({ userId: this.userId(), page: this.page() });
+  }
+  changePage(page: number): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { page },
+      queryParamsHandling: 'merge',
     });
   }
-
-  salvarWebhook() {
-    if (!this.webhookUrl) {
-      Swal.fire('Atenção', 'Cole a URL do Webhook primeiro!', 'warning');
-      return;
+  edit(): void {
+    const user = this.data()?.user;
+    if (!user || !this.isOwner()) return;
+    this.form.reset({
+      nome: user.nome,
+      nickname: user.nickname,
+      email: user.email || '',
+      url_foto_perfil: user.url_foto_perfil || '',
+    });
+    this.saveError.set('');
+    this.editing.set(true);
+  }
+  save(): void {
+    if (this.saving()) return;
+    this.form.markAllAsTouched();
+    if (this.form.invalid) return;
+    this.saving.set(true);
+    this.saveError.set('');
+    this.api
+      .updateProfile(this.form.getRawValue())
+      .pipe(
+        takeUntilDestroyed(this.destroy),
+        finalize(() => this.saving.set(false)),
+      )
+      .subscribe({
+        next: (result) => {
+          this.auth.updateUser(result.user);
+          this.data.update((data) => (data ? { ...data, user: result.user } : data));
+          this.editing.set(false);
+          this.notices.show('Seu perfil foi atualizado.');
+          this.store.ensureLoaded(true).pipe(takeUntilDestroyed(this.destroy)).subscribe();
+        },
+        error: (error: unknown) => this.saveError.set(errorMessage(error)),
+      });
+  }
+  saveDiscord(): void {
+    if (this.discordSaving()) return;
+    this.webhook.markAllAsTouched();
+    if (this.webhook.invalid) return;
+    this.updateDiscord(this.webhook.controls.url.value.trim());
+  }
+  updateDiscord(url: string | null): void {
+    if (this.discordSaving()) return;
+    this.discordSaving.set(true);
+    this.discordError.set('');
+    this.api
+      .updateDiscord(url)
+      .pipe(
+        takeUntilDestroyed(this.destroy),
+        finalize(() => this.discordSaving.set(false)),
+      )
+      .subscribe({
+        next: (result) => {
+          this.webhook.reset();
+          this.disconnecting.set(false);
+          this.notices.show(url ? result.message : 'Integração com o Discord removida.');
+          this.store.ensureLoaded(true).pipe(takeUntilDestroyed(this.destroy)).subscribe();
+        },
+        error: (error: unknown) => this.discordError.set(errorMessage(error)),
+      });
+  }
+  async copyCode(): Promise<void> {
+    const code = this.data()?.clube?.codigo;
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      this.notices.show('Código do clube copiado.');
+    } catch {
+      this.notices.show('Selecione o código do clube e copie para compartilhar.', 'info');
     }
-
-    this.clubeService.atualizarDiscord(this.webhookUrl).subscribe({
-      next: () => {
-        Swal.fire({
-          title: 'Conectado!',
-          text: 'O Oráculo foi atualizado com sucesso no servidor!',
-          icon: 'success',
-          background: '#1e1e1e', color: '#fff'
-        });
-      },
-      error: (err: any) => {
-        Swal.fire('Erro', err.error?.error || 'Falha ao salvar a URL.', 'error');
-      }
-    });
-  }
-
-  carregarPerfil() {
-    this.isLoading = true;
-    this.userService.getPerfil().subscribe({
-      next: (res) => {
-        this.dados = res;
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Erro ao carregar perfil:', err);
-        this.isLoading = false;
-        this.cdr.detectChanges();
-        Swal.fire('Erro', 'Não foi possível carregar os dados.', 'error');
-      }
-    });
-  }
-
-  abrirEdicao(event?: Event) {
-    // 1. Impede que o clique "vaze" para outros elementos sem querer
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    console.log("✏️ Preparando dados para o modal...");
-    this.formEdit = {
-      nickname: this.dados?.user?.nickname || '',
-      url_foto_perfil: this.dados?.user?.url_foto_perfil || ''
-    };
-
-    // 2. A BALA DE PRATA: Força o Angular a renderizar no próximo frame
-    setTimeout(() => {
-      this.mostrarModalEdit = true;
-      this.cdr.detectChanges(); // Acorda o HTML!
-      console.log("👁️ Modal deve estar visível agora! Estado:", this.mostrarModalEdit);
-    }, 0);
-  }
-
-  fecharEdicao() {
-    this.mostrarModalEdit = false;
-    this.cdr.detectChanges();
-  }
-
-  salvarEdicao() {
-    if (!this.formEdit.nickname) {
-      Swal.fire('Atenção', 'O nickname não pode estar vazio!', 'warning');
-      return;
-    }
-
-    console.log("💾 Tentando salvar os dados:", this.formEdit);
-
-    // Enviamos direto (se o seu UserService já faz o embrulho {user: ...})
-    // Se o backend continuar a recusar, mude para { user: this.formEdit }
-    this.userService.atualizarPerfil(this.formEdit).subscribe({
-      next: (res) => {
-        console.log("✅ Salvo com sucesso no backend!", res);
-        Swal.fire({ title: 'Perfil Atualizado!', icon: 'success', timer: 1500, showConfirmButton: false, background: '#1e1e1e', color: '#fff' });
-        this.mostrarModalEdit = false;
-        this.carregarPerfil();
-      },
-      error: (err) => {
-        console.error("❌ Erro ao salvar:", err);
-        Swal.fire('Erro', err.error?.error || 'Falha ao atualizar. Verifique a consola (F12).', 'error');
-      }
-    });
-  }
-  irParaCalendario() {
-    this.router.navigate(['/historico']);
   }
 }

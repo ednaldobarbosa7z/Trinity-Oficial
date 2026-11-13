@@ -1,49 +1,98 @@
-<div class="register-container">
-
-  <div class="register-card">
-
-    <div class="header">
-      <div class="logo-wrapper">
-        <img src="logo.png" alt="Clube Filme Logo" class="register-logo">
+<app-auth-layout>
+  <span class="eyebrow">Seu ingresso para boas histórias</span>
+  <h1>Faça parte da conversa.</h1>
+  <p class="lead">Crie sua conta e entre em um clube ou comece o seu.</p>
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate [attr.aria-busy]="loading()">
+    @if (error()) {
+      <p class="form-error" role="alert">{{ error() }}</p>
+    }
+    <div class="field-row">
+      <div class="field">
+        <label for="register-name">Seu nome</label>
+        <input
+          id="register-name"
+          formControlName="nome"
+          autocomplete="name"
+          placeholder="Como você se chama?"
+          maxlength="150"
+          required
+        />
+        <app-field-error [control]="form.controls.nome" />
       </div>
-      <h2>Criar Conta</h2>
+      <div class="field">
+        <label for="register-nickname">Nome no clube</label>
+        <input
+          id="register-nickname"
+          formControlName="nickname"
+          autocomplete="nickname"
+          placeholder="Seu nickname"
+          maxlength="50"
+          required
+        />
+        <app-field-error [control]="form.controls.nickname" />
+      </div>
     </div>
-
-    <form (ngSubmit)="onSubmit()">
-
-      <div class="form-group">
-        <label>Nome Completo</label>
-        <input type="text" [(ngModel)]="user.nome" name="nome" placeholder="Ex: João Silva" required>
-      </div>
-
-      <div class="form-group">
-        <label>Nickname (Apelido)</label>
-        <input type="text" [(ngModel)]="user.nickname" name="nickname" placeholder="Ex: cinefilo99" required>
-      </div>
-
-      <div class="form-group">
-        <label>E-mail</label>
-        <input type="email" [(ngModel)]="user.email" name="email" placeholder="seu@email.com" required>
-      </div>
-
-      <div class="form-group">
-        <label>Senha</label>
-        <input type="password" [(ngModel)]="user.password" name="password" placeholder="••••••••" required>
-      </div>
-
-      <div class="error-msg" *ngIf="errorMessage">
-        ⚠️ {{ errorMessage }}
-      </div>
-
-      <button type="submit" class="btn-primary" [disabled]="isLoading">
-        {{ isLoading ? 'Criando conta...' : 'Cadastrar' }}
-      </button>
-
-    </form>
-
-    <div class="footer">
-      <p>Já tem conta? <a routerLink="/login">Faça Login</a></p>
+    <div class="field">
+      <label for="register-email">Email</label>
+      <input
+        id="register-email"
+        type="email"
+        formControlName="email"
+        autocomplete="username"
+        placeholder="voce@exemplo.com"
+        maxlength="254"
+        required
+      />
+      <app-field-error [control]="form.controls.email" />
     </div>
-
-  </div>
-</div>
+    <div class="field">
+      <label for="register-password">Crie uma senha</label>
+      <div class="password-field">
+        <input
+          id="register-password"
+          [type]="showPassword() ? 'text' : 'password'"
+          formControlName="password"
+          autocomplete="new-password"
+          aria-describedby="password-hint"
+          placeholder="Pelo menos 8 caracteres"
+          minlength="8"
+          maxlength="72"
+          required
+        />
+        <button
+          type="button"
+          class="password-toggle"
+          [attr.aria-pressed]="showPassword()"
+          (click)="showPassword.set(!showPassword())"
+        >
+          {{ showPassword() ? 'Ocultar' : 'Mostrar' }}
+        </button>
+      </div>
+      <small id="password-hint">Use uma senha única, com pelo menos 8 caracteres.</small>
+      <app-field-error [control]="form.controls.password" />
+    </div>
+    <div class="field">
+      <label for="register-confirm">Confirme sua senha</label>
+      <input
+        id="register-confirm"
+        [type]="showPassword() ? 'text' : 'password'"
+        formControlName="password_confirmation"
+        autocomplete="new-password"
+        placeholder="Digite a senha novamente"
+        required
+      />
+      @if (form.hasError('passwordMismatch') && form.controls.password_confirmation.touched) {
+        <small class="field-error">As senhas precisam ser iguais.</small>
+      }
+      <app-field-error [control]="form.controls.password_confirmation" />
+    </div>
+    <button class="btn btn-primary btn-block" type="submit" [disabled]="loading()">
+      @if (loading()) {
+        <span class="spinner small"></span>
+      }
+      {{ loading() ? 'Criando sua conta…' : 'Criar minha conta' }}
+      <app-icon name="arrow" [size]="17" />
+    </button>
+  </form>
+  <p class="form-footer">Já tem um ingresso? <a routerLink="/login">Entre na sua conta</a></p>
+</app-auth-layout>

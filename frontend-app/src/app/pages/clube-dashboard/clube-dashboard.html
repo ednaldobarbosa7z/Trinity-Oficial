@@ -1,429 +1,391 @@
-<div class="dashboard-container" *ngIf="!isLoading; else loading">
-  <main class="content">
-    <section class="ciclo-atual-section">
-      <div *ngIf="cicloAtual; else semCiclo" class="ciclo-container">
-
-        <div class="ciclo-header">
-          <div class="title-wrapper">
-            <h2>MÊS DE {{ nomeDoMes(cicloAtual.mes) }}</h2>
-            <span class="ano-badge">{{ cicloAtual.ano }}</span>
-          </div>
-          <div class="tema-container" *ngIf="cicloAtual.tema">
-            <span class="tema-tag">TEMA DO MÊS</span>
-            <h3 class="tema-titulo">{{ cicloAtual.tema }}</h3>
-          </div>
-        </div>
-
-        <div class="slider-wrapper" (mouseenter)="pararAutoPlay()" (mouseleave)="iniciarAutoPlay()">
-          <button class="nav-btn prev" (click)="scrollEsquerda()">❮</button>
-
-          <div class="slots-list" #scrollContainer (scroll)="onScroll($event)">
-            <div *ngFor="let slot of cicloAtual.slots" class="slot-item">
-
-              <div *ngIf="slot.filme" class="hero-card">
-
-                <div class="hero-background">
-                  <img *ngIf="slot.filme.url_backdrop" [src]="slot.filme.url_backdrop" class="bg-img">
-                  <img *ngIf="!slot.filme.url_backdrop && slot.filme.url_poster" [src]="slot.filme.url_poster"
-                    class="bg-img blur-fallback">
-                  <div class="hero-overlay-gradient"></div>
-                </div>
-
-                <div class="hero-flex-wrapper">
-                  <div class="hero-content-transparent">
-
-                    <div class="mini-poster" *ngIf="slot.filme.url_poster">
-                      <img [src]="slot.filme.url_poster" alt="Poster">
-                    </div>
-
-                    <div class="hero-info-right">
-                      <div class="indicador-label">
-                        INDICADO POR <span class="neon-name">{{ slot.user?.nickname | uppercase }}</span>
-                        <span class="vaga-badge">(Vaga #{{ slot.posicao }})</span>
-                      </div>
-
-                      <h3 class="movie-title-inline">
-                        {{ slot.filme.titulo }}
-                        <span class="year" *ngIf="slot.filme.ano_lancamento">({{ slot.filme.ano_lancamento }})</span>
-                      </h3>
-
-                      <p class="sinopse-text" *ngIf="slot.filme.sinopse">
-                        {{ slot.filme.sinopse | slice:0:220 }}{{ slot.filme.sinopse.length > 220 ? '...' : '' }}
-                      </p>
-
-                      <div class="hero-actions-row">
-                        <button class="btn-actions-plus" (click)="abrirModalAcoes(slot)">+</button>
-
-                        <div *ngIf="slot.minha_avaliacao" class="badge-nota-small">
-                          ⭐ Nota: {{ slot.minha_avaliacao.nota }}
-                        </div>
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-              </div>
-
-              <div *ngIf="!slot.filme" class="empty-slot-card">
-                <div class="dashed-border">
-                  <div class="content-empty">
-                    <span class="slot-number">Vaga #{{ slot.posicao }}</span>
-                    <div class="icon">⏳</div>
-                    <p class="status">Aguardando indicação de:<br>
-                      <strong>{{ slot.user?.nickname || 'Sorteio' }}</strong>
-                    </p>
-                    <button *ngIf="eMinhaVez(slot)" class="btn-indicate" (click)="abrirModalIndicacao(slot)">
-                      INDICAR FILME
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-          <button class="nav-btn next" (click)="scrollDireita()">❯</button>
-
-          <div class="carousel-indicators">
-            <span class="dot" *ngFor="let slot of cicloAtual.slots; let i = index"
-              [class.active]="i === currentSlideIndex" (click)="goToSlide(i)">
-            </span>
-          </div>
-        </div>
-
-        <div class="central-column-layout fade-in">
-
-          <div class="widget-full">
-            <h3 class="widget-title">🔥 No Radar </h3>
-            <div class="feed-list" *ngIf="atividades.length > 0; else semAtividades">
-              <div class="feed-item" *ngFor="let ativ of atividades">
-                <div class="feed-avatar clickable-user" (click)="visitarPerfil(ativ.user_id)" title="Visitar perfil">
-                  <img *ngIf="ativ.avatar" [src]="ativ.avatar">
-                  <span *ngIf="!ativ.avatar">{{ ativ.user?.charAt(0)?.toUpperCase() || '?' }}</span>
-                </div>
-                <div class="feed-content">
-                  <p *ngIf="ativ.tipo === 'indicacao'">
-                    <strong class="user-name clickable-user" (click)="visitarPerfil(ativ.user_id)">@{{ ativ.user
-                      }}</strong>
-                    indicou o filme <strong class="movie-name">"{{ ativ.filme }}"</strong> 🎬
-                  </p>
-                  <p *ngIf="ativ.tipo === 'avaliacao'">
-                    <strong class="user-name clickable-user" (click)="visitarPerfil(ativ.user_id)">@{{ ativ.user
-                      }}</strong>
-                    avaliou <strong class="movie-name">"{{ ativ.filme }}"</strong> com
-                    <span class="nota-badge" [class.nota-alta]="ativ.nota >= 4.0" [class.nota-baixa]="ativ.nota < 2.5">
-                      ⭐ {{ ativ.nota | number:'1.1-1' }}
-                    </span>
-                  </p>
-                  <span class="feed-time">{{ ativ.data | date:'dd/MM HH:mm' }}</span>
-                </div>
-              </div>
-            </div>
-            <ng-template #semAtividades>
-              <div class="empty-feed">
-                <span class="icon">🦗</span>
-                <p>Nenhuma atividade recente.</p>
-              </div>
-            </ng-template>
-          </div>
-
-          <div class="widget-full">
-            <h3 class="widget-title">📊 Seu Resumo</h3>
-            <div class="stats-card-full">
-              <div class="timer-box">
-                <div class="timer-icon">⏳</div>
-                <div class="timer-texts">
-                  <span class="timer-number">{{ diasRestantes }} dias</span>
-                  <span class="timer-label">para fechar o ciclo</span>
-                </div>
-              </div>
-
-              <div class="progress-grid">
-                <div class="progress-section">
-                  <div class="progress-header">
-                    <span>Filmes do Clube ({{ progressoClube }}%)</span>
-                  </div>
-                  <div class="progress-bar-bg">
-                    <div class="progress-bar-fill club-fill" [style.width.%]="progressoClube"></div>
-                  </div>
-                  <small>Slots preenchidos este mês</small>
-                </div>
-
-                <div class="progress-section">
-                  <div class="progress-header">
-                    <span style="color: #ffc107;">Suas Avaliações ({{ progressoPessoal }}%)</span>
-                  </div>
-                  <div class="progress-bar-bg">
-                    <div class="progress-bar-fill my-fill" [style.width.%]="progressoPessoal"></div>
-                  </div>
-                  <small>Filmes assistidos</small>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="widget-full">
-            <div class="widget-header-row">
-              <h3 class="widget-title">🍿 Encontros</h3>
-              <button *ngIf="souAdmin" class="btn-add-mini" (click)="abrirModalReuniao()">+ Agendar</button>
-            </div>
-            <div class="meetings-card-full">
-              <div class="meetings-list" *ngIf="cicloAtual?.reunioes?.length > 0; else semReunioes">
-                <div class="meeting-item" *ngFor="let reuniao of cicloAtual.reunioes">
-                  <div class="meeting-date">
-                    <span class="day">{{ reuniao.data_hora | date:'dd' }}</span>
-                    <span class="month">{{ reuniao.data_hora | date:'MMM' }}</span>
-                  </div>
-                  <div class="meeting-info">
-                    <div class="m-header-flex">
-                      <h4 class="m-title">{{ reuniao.titulo }}</h4>
-                      <button *ngIf="souAdmin" (click)="excluirReuniao(reuniao)" class="btn-delete-meeting">×</button>
-                    </div>
-                    <p class="m-details">
-                      <span class="m-type" [class.online]="reuniao.tipo === 'Online'"
-                        [class.presencial]="reuniao.tipo === 'Presencial'">
-                        {{ reuniao.tipo === 'Online' ? '💻' : '📍' }} {{ reuniao.tipo }}
-                      </span>
-                      <span class="m-time">⏰ {{ reuniao.data_hora | date:'HH:mm' }}</span>
-                    </p>
-                    <a *ngIf="reuniao.link_ou_local"
-                      [href]="reuniao.tipo === 'Online' ? reuniao.link_ou_local : 'https://www.google.com/maps/search/' + reuniao.link_ou_local"
-                      target="_blank" class="m-link">
-                      {{ reuniao.tipo === 'Online' ? 'Acessar Link' : 'Ver Localização' }} ➔
-                    </a>
-                  </div>
-                </div>
-              </div>
-              <ng-template #semReunioes>
-                <div class="empty-meetings">
-                  <span class="icon">☕</span>
-                  <p>Ainda sem encontros agendados.</p>
-                </div>
-              </ng-template>
-            </div>
-          </div>
-
-        </div>
+<div class="page dashboard-page">
+  @if (store.loading() && !store.data()) {
+    <app-state kind="loading" />
+  } @else if (store.error()) {
+    <app-state
+      kind="error"
+      title="Seu clube não carregou"
+      [message]="store.error()"
+      (retry)="retry()"
+    />
+  } @else if (store.data(); as data) {
+    <header class="page-heading">
+      <div>
+        <span class="eyebrow"><span class="line"></span> {{ data.clube.nome }}</span>
+        <h1>
+          A próxima boa conversa<br class="desktop-break" />
+          começa com um filme.
+        </h1>
+        <p>As indicações, os encontros e as histórias que conectam o clube.</p>
       </div>
-
-      <ng-template #semCiclo>
-        <div class="empty-state-wrapper">
-          <div class="empty-state-card">
-            <div class="empty-icon">📅</div>
-            <h3>Silêncio no Set!</h3>
-            <p>O ciclo deste mês ainda não foi iniciado.</p>
-            <button *ngIf="souAdmin" class="btn-setup" (click)="criarCiclo()">
-              + Iniciar Ciclo
-            </button>
-          </div>
-        </div>
-      </ng-template>
-    </section>
-  </main>
-</div>
-
-<div class="modal-overlay" *ngIf="mostrarModalAcoes" (click)="fecharModalAcoes()">
-  <div class="modal-container modal-acoes" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h2>🎬 OPÇÕES DO FILME</h2>
-      <button class="modal-close" (click)="fecharModalAcoes()">×</button>
-    </div>
-    <div class="modal-body" style="text-align: center;">
-      <h3 style="color: white; font-size: 1.8rem; margin: 0 0 2rem 0;">
-        {{ slotSelecionadoParaAcoes?.filme?.titulo }}
-      </h3>
-
-      <div class="acoes-grid" style="display: flex; flex-direction: column; gap: 15px;">
-        <a *ngIf="slotSelecionadoParaAcoes?.filme?.url_link_externo"
-          [href]="slotSelecionadoParaAcoes?.filme?.url_link_externo" target="_blank" class="btn-acao-big">
-          Detalhes no TMDB
-        </a>
-
-        <button class="btn-acao-big btn-watch" (click)="abrirPlayerAcao()">
-          ▶ Assistir Agora
+      <div class="heading-actions">
+        <button
+          type="button"
+          class="icon-button"
+          aria-label="Atualizar dados do clube"
+          (click)="retry()"
+          [disabled]="store.loading()"
+        >
+          <app-icon name="refresh" />
         </button>
-
-        <button *ngIf="!slotSelecionadoParaAcoes?.minha_avaliacao" class="btn-acao-big btn-avaliar"
-          (click)="abrirAvaliacaoAcao()">
-          ⭐ Avaliar Filme
-        </button>
-
-        <div *ngIf="slotSelecionadoParaAcoes?.minha_avaliacao" class="acao-ja-avaliado"
-          style="padding: 15px; background: rgba(255, 193, 7, 0.1); color: #ffc107; border-radius: 12px; font-weight: bold;">
-          Já avaliado com ⭐ {{ slotSelecionadoParaAcoes.minha_avaliacao.nota }}
-        </div>
+        @if (data.sou_admin) {
+          <button type="button" class="btn btn-secondary" (click)="creatingCycle.set(true)">
+            <app-icon name="plus" [size]="17" /> Novo ciclo
+          </button>
+        }
       </div>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay player-modal" *ngIf="mostrarModalPlayer" (click)="fecharPlayer()">
-  <div class="modal-container modal-video" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h2 class="neon-text">🎬 {{ filmeParaAssistir?.titulo }}</h2>
-      <button class="modal-close" (click)="fecharPlayer()">×</button>
-    </div>
-    <div class="modal-body video-wrapper">
-      <iframe *ngIf="safePlayerUrl" [src]="safePlayerUrl" allowfullscreen frameborder="0" scrolling="no"></iframe>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" *ngIf="mostrarModalBusca" (click)="fecharModalBusca()">
-  <div class="modal-container modal-busca" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h2>🎬 INDICAR FILME</h2>
-      <button class="modal-close" (click)="fecharModalBusca()">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="busca-section">
-        <div class="search-box">
-          <input type="text" [(ngModel)]="termoBusca" (keyup.enter)="buscarFilme()" placeholder="Pesquisar..."
-            autofocus>
-          <button class="btn-search" (click)="buscarFilme()">BUSCAR</button>
+    </header>
+    @if (cycle(); as current) {
+      <section class="cycle-banner panel">
+        <div>
+          <span class="badge badge-green"><span class="status-dot"></span> Ciclo aberto</span>
+          <p class="cycle-period">
+            {{ months[current.mes - 1] }} <span>{{ current.ano }}</span>
+          </p>
+          <h2>{{ current.tema || 'Boas histórias, tema livre.' }}</h2>
+          <a routerLink="/historico" class="text-link"
+            >Ver todos os ciclos <app-icon name="arrow" [size]="15"
+          /></a>
         </div>
-        <div class="resultados-container" *ngIf="resultadosBusca.length > 0">
-          <div class="resultado-item" *ngFor="let filme of resultadosBusca">
-            <div class="resultado-poster">
+        <div class="cycle-progress">
+          <div class="progress-top">
+            <span>Indicações do clube</span
+            ><strong
+              >{{ indicatedCount() }} <span>/ {{ current.slots.length }}</span></strong
+            >
+          </div>
+          <progress
+            [value]="indicatedCount()"
+            [max]="current.slots.length || 1"
+            aria-label="Vagas com filme indicado"
+          ></progress>
+          <p>
+            {{
+              progress() === 100
+                ? 'Todos os filmes estão na mesa. Boa sessão!'
+                : 'Cada indicação abre uma nova conversa.'
+            }}
+          </p>
+        </div>
+      </section>
+      <section class="next-step" aria-label="Suas pendências">
+        <span class="next-step-icon"
+          ><app-icon
+            [name]="
+              pendingIndications().length ? 'ticket' : pendingReviews().length ? 'star' : 'check'
+            "
+            [size]="25"
+        /></span>
+        <div>
+          <span class="eyebrow">Sua próxima cena</span>
+          @if (pendingIndications().length) {
+            <h2>
+              {{
+                pendingIndications().length === 1
+                  ? 'Tem uma vaga esperando sua indicação.'
+                  : pendingIndications().length + ' vagas estão esperando sua indicação.'
+              }}
+            </h2>
+            <p>Escolha um filme para compartilhar com a turma.</p>
+          } @else if (pendingReviews().length) {
+            <h2>
+              {{ pendingReviews().length }}
+              {{ pendingReviews().length === 1 ? 'filme espera' : 'filmes esperam' }} pela sua
+              opinião.
+            </h2>
+            <p>Assistiu? Conte ao clube o que achou.</p>
+          } @else {
+            <h2>Sua parte está em dia.</h2>
+            <p>Explore as críticas e continue a conversa no catálogo.</p>
+          }
+        </div>
+        @if (pendingIndications().length || pendingReviews().length) {
+          <button type="button" class="btn btn-primary" (click)="nextAction()">
+            {{ pendingIndications().length ? 'Indicar meu filme' : 'Escrever uma crítica' }}
+            <app-icon name="arrow" [size]="16" />
+          </button>
+        } @else {
+          <a routerLink="/filmes" class="btn btn-secondary"
+            >Explorar catálogo <app-icon name="arrow" [size]="16"
+          /></a>
+        }
+      </section>
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">A seleção da turma</span>
+          <h2>Filmes deste ciclo</h2>
+        </div>
+        <span class="badge">{{ current.slots.length }} vagas</span>
+      </div>
+      <div class="slot-grid">
+        @for (slot of current.slots; track slot.id) {
+          <article class="slot-card panel" [class.slot-empty]="!slot.filme">
+            @if (slot.filme; as film) {
               <img
-                [src]="filme.poster_path ? 'https://image.tmdb.org/t/p/w92' + filme.poster_path : 'assets/no-poster.png'">
-            </div>
-            <div class="resultado-info">
-              <h4>{{ filme.title }}</h4>
-              <p class="ano">{{ filme.release_date | date:'yyyy' }}</p>
-            </div>
-            <button class="btn-select" (click)="escolherFilme(filme)">SELECIONAR</button>
+                appPoster
+                class="slot-poster"
+                [src]="film.url_poster || '/poster-placeholder.svg'"
+                [alt]="'Pôster de ' + film.titulo"
+                width="112"
+                height="168"
+                loading="lazy"
+                decoding="async"
+              />
+              <div class="slot-body">
+                <div class="slot-topline">
+                  <span>Vaga {{ slot.posicao | number: '2.0-0' }}</span
+                  ><span>{{ film.ano_lancamento }}</span>
+                </div>
+                <h3>{{ film.titulo }}</h3>
+                <p class="slot-indicator">
+                  Indicação de
+                  @if (slot.user) {
+                    <a [routerLink]="['/perfil', slot.user.id]">{{ slot.user.nickname }}</a>
+                  } @else {
+                    <span>um membro</span>
+                  }
+                </p>
+                @if (slot.minha_avaliacao) {
+                  <span class="rating-pill"
+                    ><app-icon name="star" [size]="13" /> Sua nota:
+                    {{ slot.minha_avaliacao.nota | number: '1.1-1' }}</span
+                  >
+                } @else {
+                  <span class="badge badge-muted">Sua avaliação está pendente</span>
+                }
+                <div class="slot-actions">
+                  <button type="button" class="btn btn-quiet btn-small" (click)="showDetails(film)">
+                    Ver detalhes
+                  </button>
+                  @if (!slot.minha_avaliacao) {
+                    <button
+                      type="button"
+                      class="btn btn-primary btn-small"
+                      (click)="reviewing.set(film)"
+                    >
+                      <app-icon name="star" [size]="14" /> Avaliar
+                    </button>
+                  }
+                </div>
+              </div>
+            } @else {
+              <div class="empty-poster"><app-icon name="film" [size]="30" /></div>
+              <div class="slot-body">
+                <div class="slot-topline">
+                  <span>Vaga {{ slot.posicao | number: '2.0-0' }}</span
+                  ><span>Aguardando filme</span>
+                </div>
+                <h3>A próxima descoberta.</h3>
+                <p class="slot-indicator">
+                  {{ slot.user?.nickname || 'Vaga sem responsável' }} ainda vai compartilhar uma
+                  indicação.
+                </p>
+                @if (slot.user?.id === data.meu_id) {
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-small"
+                    (click)="indication.set(slot)"
+                  >
+                    <app-icon name="plus" [size]="15" /> Indicar filme
+                  </button>
+                } @else {
+                  <span class="badge badge-muted"
+                    ><app-icon name="clock" [size]="12" /> Aguardando indicação</span
+                  >
+                }
+              </div>
+            }
+          </article>
+        }
+      </div>
+    } @else {
+      <section class="no-cycle panel">
+        <span class="state-icon"><app-icon name="ticket" [size]="30" /></span>
+        <div>
+          <span class="eyebrow">Um novo mês de descobertas</span>
+          <h2>A próxima seleção ainda está por vir.</h2>
+          <p>
+            {{
+              data.sou_admin
+                ? 'Abra um ciclo, escolha o tema e distribua as indicações entre os membros.'
+                : 'O administrador do clube vai abrir o próximo ciclo. Enquanto isso, explore os filmes que já passaram por aqui.'
+            }}
+          </p>
+          @if (data.sou_admin) {
+            <button type="button" class="btn btn-primary" (click)="creatingCycle.set(true)">
+              <app-icon name="plus" /> Abrir primeiro ciclo
+            </button>
+          } @else {
+            <a routerLink="/filmes" class="btn btn-secondary">Explorar catálogo</a>
+          }
+        </div>
+      </section>
+    }
+    <div class="split-layout dashboard-bottom">
+      <section>
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">Entre uma sessão e outra</span>
+            <h2>O clube em movimento</h2>
           </div>
+          <app-icon name="chat" />
         </div>
-      </div>
+        <div class="panel activity-panel">
+          @for (activity of data.atividades; track $index) {
+            <article class="activity-item">
+              <app-avatar [user]="{ nickname: activity.user, url_foto_perfil: activity.avatar }" />
+              <div>
+                <p>
+                  @if (activity.user_id) {
+                    <a [routerLink]="['/perfil', activity.user_id]">{{ activity.user }}</a>
+                  } @else {
+                    <strong>{{ activity.user }}</strong>
+                  }
+                  {{ activity.tipo === 'indicacao' ? ' indicou ' : ' avaliou '
+                  }}<strong>{{ activity.filme }}</strong>
+                  @if (activity.nota) {
+                    <span class="activity-rating"
+                      >{{ activity.nota | number: '1.1-1' }} <app-icon name="star" [size]="11"
+                    /></span>
+                  }
+                </p>
+                <time [attr.datetime]="activity.data">{{
+                  activity.data | date: "dd 'de' MMM, HH:mm"
+                }}</time>
+              </div>
+            </article>
+          } @empty {
+            <p class="empty-inline">
+              A atividade aparece aqui quando a turma começa a indicar e avaliar filmes.
+            </p>
+          }
+        </div>
+      </section>
+      <aside>
+        <div class="section-heading">
+          <h2>Agenda do ciclo</h2>
+          @if (data.sou_admin && cycle()) {
+            <button
+              type="button"
+              class="icon-button"
+              aria-label="Agendar sessão"
+              (click)="creatingMeeting.set(true)"
+            >
+              <app-icon name="plus" />
+            </button>
+          }
+        </div>
+        <div class="panel panel-padding agenda-panel">
+          @for (meeting of meetings(); track meeting.id) {
+            <article class="meeting-item">
+              <div class="meeting-date">
+                <span>{{ meeting.data_hora | date: 'dd' }}</span
+                ><small>{{ meeting.data_hora | date: 'MMM' }}</small>
+              </div>
+              <div>
+                <h3>{{ meeting.titulo }}</h3>
+                <p>{{ meeting.data_hora | date: 'HH:mm' }} · {{ meeting.tipo }}</p>
+                @if (safeExternalUrl(meeting.link_ou_local); as url) {
+                  <a class="text-link" [href]="url" target="_blank" rel="noopener noreferrer"
+                    >Abrir encontro <app-icon name="external" [size]="12"
+                  /></a>
+                } @else if (meeting.link_ou_local) {
+                  <p>{{ meeting.link_ou_local }}</p>
+                }
+              </div>
+              @if (data.sou_admin) {
+                <button
+                  type="button"
+                  class="icon-button"
+                  [attr.aria-label]="'Remover encontro ' + meeting.titulo"
+                  (click)="requestDelete(meeting)"
+                >
+                  <app-icon name="close" [size]="15" />
+                </button>
+              }
+            </article>
+          } @empty {
+            <app-icon name="calendar" [size]="26" />
+            <h3>Vamos marcar uma sessão?</h3>
+            <p class="muted">Os encontros combinados com a turma aparecem aqui.</p>
+            @if (data.sou_admin && cycle()) {
+              <button type="button" class="text-link" (click)="creatingMeeting.set(true)">
+                Agendar encontro <app-icon name="plus" [size]="14" />
+              </button>
+            }
+          }
+        </div>
+        <div class="section-heading">
+          <h2>Quem faz o clube</h2>
+          <span class="badge">{{ data.membros.length }}</span>
+        </div>
+        <div class="panel panel-padding members-panel">
+          @for (
+            member of showAllMembers() ? data.membros : data.membros.slice(0, 4);
+            track member.id
+          ) {
+            <a [routerLink]="['/perfil', member.id]" class="member"
+              ><app-avatar [user]="member" /><span>{{ member.nickname }}</span
+              ><app-icon name="chevron" [size]="14"
+            /></a>
+          }
+          @if (data.membros.length > 4) {
+            <button type="button" class="text-link" (click)="showAllMembers.set(!showAllMembers())">
+              {{ showAllMembers() ? 'Mostrar menos' : 'Ver todos os membros' }}
+            </button>
+          }
+        </div>
+      </aside>
     </div>
-  </div>
+    @if (indication(); as slot) {
+      <app-film-search
+        [clubId]="data.clube.id"
+        [slotId]="slot.id"
+        [position]="slot.posicao"
+        (closed)="indication.set(null)"
+        (saved)="completed('film')"
+      />
+    }
+    @if (reviewing(); as film) {
+      <app-review-form
+        [film]="film"
+        [cycleId]="cycle()!.id"
+        (closed)="reviewing.set(null)"
+        (saved)="completed('review')"
+      />
+    }
+    @if (creatingCycle()) {
+      <app-cycle-form
+        [clubId]="data.clube.id"
+        (closed)="creatingCycle.set(false)"
+        (saved)="completed('cycle')"
+      />
+    }
+    @if (creatingMeeting() && cycle()) {
+      <app-meeting-form
+        [cycleId]="cycle()!.id"
+        (closed)="creatingMeeting.set(false)"
+        (saved)="completed('meeting')"
+      />
+    }
+  }
 </div>
-
-<div class="modal-overlay" *ngIf="mostrarModalAvaliacao" (click)="fecharModalAvaliacao()">
-  <div class="modal-container modal-avaliacao" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h2>⭐ AVALIAR FILME</h2>
-      <button class="modal-close" (click)="fecharModalAvaliacao()">×</button>
-    </div>
-    <div class="modal-body">
-
-      <div class="filme-info-compacto" *ngIf="filmeParaAvaliar">
-        <img [src]="filmeParaAvaliar.url_poster || 'assets/no-poster.png'">
-        <div class="info">
-          <h3>{{ filmeParaAvaliar.titulo }}</h3>
-          <p class="ano">{{ filmeParaAvaliar.ano_lancamento }}</p>
-        </div>
-      </div>
-
-      <div class="avaliacao-section">
-
-        <label class="section-label">SUA NOTA</label>
-
-        <div class="rating-stars">
-          <div class="star-container" *ngFor="let i of [1,2,3,4,5]; let idx = index">
-            <span class="star star-left" (mouseenter)="setarNota($event, idx + 1)" (mouseleave)="limparPreview()"
-              (click)="setarNota($event, idx + 1, true)"
-              [class.active]="(notaPreview || formAvaliacao.nota) >= idx + 0.5">★</span>
-            <span class="star star-right" (mouseenter)="setarNota($event, idx + 1)" (mouseleave)="limparPreview()"
-              (click)="setarNota($event, idx + 1, true)"
-              [class.active]="(notaPreview || formAvaliacao.nota) >= idx + 1">★</span>
-          </div>
-          <span class="nota-valor">{{ (notaPreview || formAvaliacao.nota) | number:'1.1-1' }}</span>
-        </div>
-
-        <textarea [(ngModel)]="formAvaliacao.comentario" placeholder="O que achaste do filme?" rows="4"></textarea>
-
-        <div class="checkbox-group mt-3">
-          <label class="custom-checkbox">
-            <input type="checkbox" [(ngModel)]="formAvaliacao.assistiria_novamente">
-            <span class="checkmark"></span>
-            <span class="label-text">Assistiria novamente</span>
-          </label>
-        </div>
-
-        <div class="campo-opcional mt-3">
-          <label>Destaque (Ex: Fotografia, Banda Sonora...)</label>
-          <input type="text" [(ngModel)]="formAvaliacao.destaque">
-        </div>
-
-        <div class="campo-opcional" *ngIf="!souOIndicador">
-          <label>Recado para a indicação (Opcional)</label>
-          <input type="text" [(ngModel)]="formAvaliacao.recado_indicacao"
-            placeholder="Deixe um recado para quem indicou...">
-        </div>
-
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-cancelar" (click)="fecharModalAvaliacao()">Cancelar</button>
-      <button class="btn-salvar" (click)="salvarAvaliacao()" [disabled]="formAvaliacao.nota === 0">Publicar</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" *ngIf="mostrarModalConfig" (click)="fecharModal()">
-  <div class="modal-container modal-config" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h2>⚙️ CONFIGURAR MÊS</h2>
-      <button class="modal-close" (click)="fecharModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="campo-opcional">
-        <label>Tema do Ciclo:</label>
-        <input type="text" [(ngModel)]="temaInput" placeholder="Ex: Sci-Fi, Anos 80...">
-      </div>
-      <div class="campo-opcional">
-        <label>Número de Vagas:</label>
-        <div class="slots-input-group" style="display: flex; gap: 10px; align-items: center;">
-          <button type="button" (click)="qtdSlotsInput = qtdSlotsInput > 1 ? qtdSlotsInput - 1 : 1">-</button>
-          <input type="number" [(ngModel)]="qtdSlotsInput" style="text-align: center;">
-          <button type="button" (click)="qtdSlotsInput = qtdSlotsInput < 20 ? qtdSlotsInput + 1 : 20">+</button>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-cancelar" (click)="fecharModal()">Cancelar</button>
-      <button class="btn-salvar" (click)="confirmarConfiguracao()">Iniciar</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" *ngIf="mostrarModalReuniao" (click)="fecharModalReuniao()">
-  <div class="modal-container modal-config" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h2>📅 AGENDAR ENCONTRO</h2>
-      <button class="modal-close" (click)="fecharModalReuniao()">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="campo-opcional">
-        <label>Título:</label>
-        <input type="text" [(ngModel)]="formReuniao.titulo">
-      </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-        <div class="campo-opcional">
-          <label>Data/Hora:</label>
-          <input type="datetime-local" [(ngModel)]="formReuniao.data_hora">
-        </div>
-        <div class="campo-opcional">
-          <label>Tipo:</label>
-          <select [(ngModel)]="formReuniao.tipo">
-            <option value="Online">Online</option>
-            <option value="Presencial">Presencial</option>
-          </select>
-        </div>
-      </div>
-      <div class="campo-opcional">
-        <label>Link ou Localização:</label>
-        <input type="text" [(ngModel)]="formReuniao.link_ou_local">
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-cancelar" (click)="fecharModalReuniao()">Cancelar</button>
-      <button class="btn-salvar" (click)="salvarReuniao()">Agendar</button>
-    </div>
-  </div>
-</div>
-
-<ng-template #loading>
-  <div class="loading-screen">Carregando Dashboard...</div>
-</ng-template>
+@if (details(); as movie) {
+  <app-film-details [movie]="movie" (closed)="details.set(null)" />
+}
+@if (deletingMeeting(); as meeting) {
+  <app-confirm
+    title="Remover este encontro?"
+    [message]="
+      'A sessão “' +
+      meeting.titulo +
+      '” será removida da agenda. Os filmes e as avaliações continuam no clube.'
+    "
+    label="Remover encontro"
+    [destructive]="true"
+    [pending]="deleting()"
+    [error]="deleteError()"
+    (cancel)="deletingMeeting.set(null)"
+    (confirm)="removeMeeting()"
+  />
+}

@@ -1,81 +1,126 @@
-<div class="estatisticas-container" *ngIf="!carregando; else loading">
-
-    <header class="page-header">
-        <h1>Estatísticas do Clube</h1>
-        <p class="subtitle">{{ estatisticas?.clube }}</p>
-    </header>
-
-    <section class="podio-section" *ngIf="estatisticas?.top_10?.length">
-        <h2>🏆 Pódio (Top 3)</h2>
-
-        <div class="podio">
-            <div class="podio-item silver" *ngIf="estatisticas?.top_10?.[1] as filme2">
-                <div class="rank-badge">2º</div>
-                <img [src]="filme2.poster" alt="{{ filme2.titulo }}" class="poster">
-                <p class="titulo" title="{{ filme2.titulo }}">{{ filme2.titulo }}</p>
-                <span class="nota">⭐ {{ filme2.media }}</span>
-            </div>
-
-            <div class="podio-item gold" *ngIf="estatisticas?.top_10?.[0] as filme1">
-                <div class="rank-badge">1º</div>
-                <img [src]="filme1.poster" alt="{{ filme1.titulo }}" class="poster">
-                <p class="titulo" title="{{ filme1.titulo }}">{{ filme1.titulo }}</p>
-                <span class="nota">⭐ {{ filme1.media }}</span>
-            </div>
-
-            <div class="podio-item bronze" *ngIf="estatisticas?.top_10?.[2] as filme3">
-                <div class="rank-badge">3º</div>
-                <img [src]="filme3.poster" alt="{{ filme3.titulo }}" class="poster">
-                <p class="titulo" title="{{ filme3.titulo }}">{{ filme3.titulo }}</p>
-                <span class="nota">⭐ {{ filme3.media }}</span>
-            </div>
-        </div>
-    </section>
-
-    <div class="grid-estatisticas">
-        <div class="card pior-filme" *ngIf="estatisticas?.pior_filme">
-            <h2>🍅 O Pior Filme</h2>
-            <div class="pior-filme-content">
-                <img [src]="estatisticas?.pior_filme?.poster" alt="Pior Filme">
-                <div class="info">
-                    <h3>{{ estatisticas?.pior_filme?.titulo }}</h3>
-                    <span class="nota-ruim">⭐ {{ estatisticas?.pior_filme?.media }}</span>
-                    <p>Este foi o que a galera menos curtiu...</p>
+<div class="page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow"><span class="line"></span> O gosto da turma</span>
+      <h1>Cada nota conta uma história.</h1>
+      <p>Os filmes e as opiniões que marcaram {{ data()?.clube || 'o clube' }}.</p>
+    </div>
+    <span class="badge"><app-icon name="chart" [size]="16" /> Estatísticas do clube</span>
+  </header>
+  @if (loading()) {
+    <app-state kind="loading" title="Reunindo as opiniões da turma…" />
+  } @else if (error()) {
+    <app-state
+      kind="error"
+      title="As estatísticas não carregaram"
+      [message]="error()"
+      (retry)="load()"
+    />
+  } @else if (data(); as stats) {
+    @if (stats.top_10.length) {
+      <div class="statistics-grid">
+        <section class="panel ranking-panel">
+          <div class="ranking-heading">
+            <span class="eyebrow">Os favoritos da sessão</span>
+            <h2>Mais bem avaliados</h2>
+            <p>Até dez filmes, ordenados pela média das avaliações do clube.</p>
+          </div>
+          <ol class="film-ranking">
+            @for (film of stats.top_10; track film.id; let rank = $index) {
+              <li>
+                <span class="rank-number">{{ rank + 1 | number: '2.0-0' }}</span
+                ><img
+                  appPoster
+                  [src]="film.poster || '/poster-placeholder.svg'"
+                  [alt]="'Pôster de ' + film.titulo"
+                  width="48"
+                  height="72"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <div class="rank-film">
+                  <h3>{{ film.titulo }}</h3>
+                  <div class="rating-bar" aria-hidden="true">
+                    <span [style.width.%]="(film.media / 5) * 100"></span>
+                  </div>
                 </div>
+                <span class="rank-score"
+                  ><app-icon name="star" [size]="13" /> {{ film.media | number: '1.1-1'
+                  }}<small>de 5</small></span
+                >
+              </li>
+            }
+          </ol>
+        </section>
+        <aside class="stat-sidebar">
+          @if (stats.top_10[0]; as best) {
+            <section class="panel highlight-card">
+              <span class="eyebrow">Maior média do clube</span
+              ><img
+                appPoster
+                [src]="best.poster || '/poster-placeholder.svg'"
+                [alt]="'Pôster de ' + best.titulo"
+                width="135"
+                height="202"
+                loading="lazy"
+              />
+              <h2>{{ best.titulo }}</h2>
+              <span class="rating-pill"
+                ><app-icon name="star" [size]="17" /> {{ best.media | number: '1.1-1' }} / 5</span
+              >
+            </section>
+          }
+          @if (stats.pior_filme; as lowest) {
+            <section class="panel panel-padding">
+              <span class="eyebrow">Nem toda sessão conquista</span>
+              <h2>Menor média</h2>
+              <div class="lowest-film">
+                <img
+                  appPoster
+                  [src]="lowest.poster || '/poster-placeholder.svg'"
+                  [alt]="'Pôster de ' + lowest.titulo"
+                  width="45"
+                  height="67"
+                  loading="lazy"
+                />
+                <div>
+                  <h3>{{ lowest.titulo }}</h3>
+                  <span class="muted">{{ lowest.media | number: '1.1-1' }} / 5</span>
+                </div>
+              </div>
+            </section>
+          }
+        </aside>
+      </div>
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">Quem dá boas notas</span>
+          <h2>Os olhares mais generosos</h2>
+          <p>Membros com as maiores médias nas avaliações dos filmes do clube.</p>
+        </div>
+      </div>
+      <div class="generous-grid">
+        @for (member of stats.mais_generosos; track member.id) {
+          <a [routerLink]="['/perfil', member.id]" class="panel generous-card"
+            ><app-avatar
+              [user]="{ nickname: member.nickname, url_foto_perfil: member.foto_perfil }"
+            />
+            <div>
+              <h3>{{ member.nickname }}</h3>
+              <p>{{ member.total_avaliacoes }} avaliações</p>
             </div>
-        </div>
-
-        <div class="card generosos">
-            <h2>💸 Os Mais Generosos</h2>
-            <p class="desc">Quem tem o coração mole na hora de avaliar?</p>
-
-            <ul class="user-list">
-                <li *ngFor="let user of estatisticas?.mais_generosos; let i = index">
-                    <div class="user-info">
-                        <span class="posicao">{{ i + 1 }}º</span>
-
-                        <div class="avatar-circle">
-                            <img *ngIf="user.foto_perfil" [src]="user.foto_perfil" class="avatar-img">
-                            <span *ngIf="!user.foto_perfil" class="avatar-letter">{{
-                                user.nickname?.charAt(0)?.toUpperCase() }}</span>
-                        </div>
-
-                        <span class="nickname">{{ user.nickname }}</span>
-                    </div>
-                    <div class="user-stats">
-                        <span class="media-dada">Média: {{ user.media_dada }}</span>
-                        <span class="total-avaliacoes">({{ user.total_avaliacoes }} avaliações)</span>
-                    </div>
-                </li>
-            </ul>
-        </div>
-    </div>
-
+            <span class="rating-pill"
+              ><app-icon name="star" [size]="13" /> {{ member.media_dada | number: '1.1-1' }}</span
+            ></a
+          >
+        }
+      </div>
+    } @else {
+      <app-state
+        title="O ranking começa com a primeira opinião"
+        message="Assim que a turma avaliar os filmes, as estatísticas do clube aparecem aqui."
+        ><a class="btn btn-primary" routerLink="/dashboard">Ver os filmes do ciclo</a></app-state
+      >
+    }
+  }
 </div>
-
-<ng-template #loading>
-    <div class="loading-state">
-        <div class="spinner"></div>
-        <p>Calculando o ranking...</p>
-    </div>
-</ng-template>

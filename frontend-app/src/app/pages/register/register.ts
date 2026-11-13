@@ -1,76 +1,69 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router'; // Importante para o routerLink
+import { Component, DestroyRef, inject, signal } from '@angular/core';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
+import { AuthLayoutComponent } from '../../shared/auth-layout';
+import { FieldErrorComponent, IconComponent } from '../../shared/ui';
+import { errorMessage } from '../../core/utils';
 
+export function passwordsMatch(control: AbstractControl): ValidationErrors | null {
+  return control.get('password')?.value === control.get('password_confirmation')?.value
+    ? null
+    : { passwordMismatch: true };
+}
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule], // Adicione RouterModule aqui
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    AuthLayoutComponent,
+    FieldErrorComponent,
+    IconComponent,
+  ],
   templateUrl: './register.html',
-  styleUrl: './register.scss'
+  styleUrl: './register.scss',
 })
 export class RegisterComponent {
-
-  // Objeto para agrupar os dados do formulário
-  user = {
-    nome: '',
-    nickname: '',
-    email: '',
-    password: ''
-  };
-
-  errorMessage = '';
-  isLoading = false;
-
-  constructor(private router: Router, private authService: AuthService) {}
-
-  onSubmit() {
-    // Validação simples
-    if (!this.user.nome || !this.user.nickname || !this.user.email || !this.user.password) {
-      this.errorMessage = 'Por favor, preencha todos os campos.';
-      return;
-    }
-
-    this.isLoading = true;
-    this.errorMessage = '';
-
-    // Prepara o objeto para o Rails
-    // O Rails costuma exigir password_confirmation. 
-    // Como simplificamos o form, enviamos a senha duplicada para passar na validação.
-    const payload = {
-      nome: this.user.nome,
-      nickname: this.user.nickname,
-      email: this.user.email,
-      password: this.user.password,
-      password_confirmation: this.user.password 
-    };
-
-    this.authService.register(payload).subscribe({
-      next: (response) => {
-        this.isLoading = false;
-        // Sucesso! Manda para o login
-        alert('Cadastro realizado com sucesso! Por favor, faça login.');
-        this.router.navigate(['/login']);
-      },
-      error: (err) => {
-        this.isLoading = false;
-        console.error(err);
-        
-        // Tenta pegar a mensagem de erro específica do Rails ou usa uma padrão
-        if (err.error && err.error.errors) {
-          // O Rails costuma devolver { errors: ["Email já está em uso", ...] }
-          this.errorMessage = err.error.errors.join(', ');
-        } else {
-          this.errorMessage = 'Erro ao cadastrar. Verifique seus dados.';
-        }
-      }
-    });
-  }
-
-  // Método opcional, já que usamos routerLink no HTML, mas bom manter
-  goToLogin() {
-    this.router.navigate(['/login']);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly destroy = inject(DestroyRef);
+  readonly form = inject(FormBuilder).nonNullable.group(
+    {
+      nome: ['', [Validators.required, Validators.maxLength(150)]],
+      nickname: ['', [Validators.required, Validators.maxLength(50)]],
+      email: ['', [Validators.required, Validators.email, Validators.maxLength(254)]],
+      password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(72)]],
+      password_confirmation: ['', Validators.required],
+    },
+    { validators: passwordsMatch },
+  );
+  readonly loading = signal(false);
+  readonly error = signal('');
+  readonly showPassword = signal(false);
+  submit(): void {
+    if (this.loading()) return;
+    this.form.markAllAsTouched();
+    if (this.form.invalid) return;
+    this.loading.set(true);
+    this.error.set('');
+    this.auth
+      .register(this.form.getRawValue())
+      .pipe(
+        takeUntilDestroyed(this.destroy),
+        finalize(() => this.loading.set(false)),
+      )
+      .subscribe({
+        next: () => void this.router.navigateByUrl('/setup'),
+        error: (error: unknown) => this.error.set(errorMessage(error)),
+      });
   }
 }

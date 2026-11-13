@@ -1,57 +1,83 @@
 import { Routes } from '@angular/router';
-import { LoginComponent } from './pages/login/login';
-import { RegisterComponent } from './pages/register/register';
-import { ClubeSetupComponent } from './pages/clube-setup/clube-setup';
-import { ClubeDashboardComponent } from './pages/clube-dashboard/clube-dashboard';
-import { AdicionarFilmeComponent } from './pages/adicionar-filme/adicionar-filme';
-import { HistoricoCiclosComponent } from './pages/historico/historico';
-import { CatalogoFilmesComponent } from './components/catalogo-filmes/catalogo-filmes';
-import { UserProfileComponent } from './components/user-profile/user-profile';
-import { EstatisticasComponent } from './pages/estatisticas/estatisticas';
+import { authGuard, clubGuard, guestGuard, setupGuard } from './core/guards';
 
 export const routes: Routes = [
   {
     path: 'login',
-    component: LoginComponent
+    title: 'Entrar · Trinity',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./pages/login/login').then((m) => m.LoginComponent),
   },
   {
     path: 'register',
-    component: RegisterComponent
+    title: 'Criar conta · Trinity',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./pages/register/register').then((m) => m.RegisterComponent),
   },
-  {
-    path: 'setup',
-    component: ClubeSetupComponent
-  },
-  {
-    path: 'dashboard',
-    component: ClubeDashboardComponent
-  },
-  {
-    path: 'adicionar-filme',
-    component: AdicionarFilmeComponent
-  },
-  {
-    path: 'historico',
-    component: HistoricoCiclosComponent
-  },
-  // --- ADICIONE ESTE BLOCO ---
-  {
-    path: 'perfil',
-    component: UserProfileComponent
-  },
-  {
-    path: 'perfil/:id',
-    component: UserProfileComponent
-  },
-  { path: 'filmes', component: CatalogoFilmesComponent },
-  {
-    path: 'clube/:id/estatisticas',
-    component: EstatisticasComponent
-  },
-  // ---------------------------
   {
     path: '',
-    redirectTo: 'login',
-    pathMatch: 'full'
-  }
+    canActivate: [authGuard],
+    children: [
+      {
+        path: 'setup',
+        title: 'Seu clube · Trinity',
+        canActivate: [setupGuard],
+        loadComponent: () =>
+          import('./pages/clube-setup/clube-setup').then((m) => m.ClubeSetupComponent),
+      },
+      {
+        path: '',
+        canActivate: [clubGuard],
+        children: [
+          {
+            path: 'dashboard',
+            title: 'Início · Trinity',
+            loadComponent: () =>
+              import('./pages/clube-dashboard/clube-dashboard').then(
+                (m) => m.ClubeDashboardComponent,
+              ),
+          },
+          {
+            path: 'filmes',
+            title: 'Catálogo · Trinity',
+            loadComponent: () =>
+              import('./components/catalogo-filmes/catalogo-filmes').then(
+                (m) => m.CatalogoFilmesComponent,
+              ),
+          },
+          {
+            path: 'historico',
+            title: 'Ciclos · Trinity',
+            loadComponent: () =>
+              import('./pages/historico/historico').then((m) => m.HistoricoCiclosComponent),
+          },
+          { path: 'adicionar-filme', pathMatch: 'full', redirectTo: 'dashboard' },
+          {
+            path: 'perfil',
+            title: 'Meu perfil · Trinity',
+            loadComponent: () =>
+              import('./components/user-profile/user-profile').then((m) => m.UserProfileComponent),
+          },
+          {
+            path: 'perfil/:id',
+            title: 'Perfil · Trinity',
+            loadComponent: () =>
+              import('./components/user-profile/user-profile').then((m) => m.UserProfileComponent),
+          },
+          {
+            path: 'clube/:id/estatisticas',
+            title: 'Estatísticas · Trinity',
+            loadComponent: () =>
+              import('./pages/estatisticas/estatisticas').then((m) => m.EstatisticasComponent),
+          },
+          { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+        ],
+      },
+    ],
+  },
+  {
+    path: '**',
+    title: 'Página não encontrada · Trinity',
+    loadComponent: () => import('./pages/not-found/not-found').then((m) => m.NotFoundComponent),
+  },
 ];

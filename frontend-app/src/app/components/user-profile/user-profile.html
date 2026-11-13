@@ -1,212 +1,391 @@
-<div class="profile-container" *ngIf="!isLoading && dados; else loading">
-
-    <header class="profile-header">
-        <div class="cover-image"></div>
-        <div class="profile-info-card">
-            <div class="avatar-area">
-                <img *ngIf="dados.user?.url_foto_perfil" [src]="dados.user.url_foto_perfil"
-                    (error)="dados.user.url_foto_perfil = null" alt="Avatar" class="avatar-img">
-                <div *ngIf="!dados.user?.url_foto_perfil" class="avatar-letter">
-                    {{ dados.user?.nickname?.charAt(0)?.toUpperCase() }}
-                </div>
-                <button class="btn-edit" *ngIf="isOwner" (click)="abrirEdicao()">✎</button>
-            </div>
-            <h1 class="nickname">{{ dados.user?.nickname }}</h1>
-            <p class="email" *ngIf="isOwner">{{ dados.user?.email }}</p>
-            <span class="member-since">Membro desde {{ dados.user?.created_at | date:'yyyy' }}</span>
+<div class="page profile-page">
+  @if (loading() && !data()) {
+    <app-state kind="loading" title="Abrindo o perfil…" />
+  } @else if (error()) {
+    <app-state kind="error" title="Este perfil não carregou" [message]="error()" (retry)="load()" />
+  } @else if (data(); as profile) {
+    <section class="profile-heading panel">
+      <div class="profile-cover" aria-hidden="true">
+        <span>O cinema fica melhor com a sua opinião.</span><app-icon name="film" [size]="60" />
+      </div>
+      <div class="profile-identity">
+        <app-avatar [user]="profile.user" [large]="true" />
+        <div>
+          <span class="eyebrow">{{
+            isOwner() ? 'Seu espaço no clube' : 'Quem faz parte da conversa'
+          }}</span>
+          <h1>{{ profile.user.nickname }}</h1>
+          <p>
+            {{ profile.user.nome }}
+            @if (isOwner() && profile.user.email) {
+              <span> · {{ profile.user.email }}</span>
+            }
+          </p>
         </div>
-    </header>
-
-    <section class="top-dashboard">
-        <div class="dash-card club-card" *ngIf="dados.clube">
-            <div class="card-icon">🎬</div>
-            <div class="card-info">
-                <h3>{{ dados.clube.nome }}</h3>
-                <div class="code-box">Código: <span>{{ dados.clube.codigo }}</span></div>
-            </div>
-        </div>
-
-        <div class="dash-card stats-card">
-            <div class="stat-item">
-                <span class="value">{{ dados.stats?.total_avaliacoes || 0 }}</span>
-                <span class="label">Críticas</span>
-            </div>
-            <div class="divider"></div>
-            <div class="stat-item">
-                <span class="value">{{ dados.stats?.total_filmes_assistidos || 0 }}</span>
-                <span class="label">Assistidos</span>
-            </div>
-        </div>
-
-        <div class="dash-card friends-card" *ngIf="dados.amigos && dados.amigos.length > 0">
-            <h3>Aliados ({{ dados.amigos.length }})</h3>
-            <div class="avatar-group">
-                <div class="friend-avatar" *ngFor="let amigo of getPrimeirosAmigos()" [title]="amigo?.nickname"
-                    (click)="irParaPerfil(amigo.id)" style="cursor: pointer;">
-                    <img *ngIf="amigo?.url_foto_perfil" [src]="amigo.url_foto_perfil">
-                    <span *ngIf="!amigo?.url_foto_perfil">{{ amigo?.nickname?.charAt(0)?.toUpperCase() }}</span>
-                </div>
-                <div class="friend-avatar more" *ngIf="dados.amigos.length > 5">+{{ dados.amigos.length - 5 }}</div>
-            </div>
-        </div>
+        @if (isOwner()) {
+          <button type="button" class="btn btn-secondary" (click)="edit()">
+            <app-icon name="edit" [size]="16" /> Editar perfil
+          </button>
+        }
+      </div>
     </section>
-
-    <nav class="profile-tabs">
-        <button [class.active]="abaAtiva === 'avaliacoes'" (click)="mudarAba('avaliacoes')">
-            📝 {{ isOwner ? 'Minhas Avaliações' : 'Avaliações' }}
-        </button>
-        <button [class.active]="abaAtiva === 'recados'" (click)="mudarAba('recados')">
-            📬 Correio Cinéfilo
-            <span class="badge" *ngIf="dados.recados_recebidos?.length">{{ dados.recados_recebidos?.length }}</span>
-        </button>
-        <button [class.active]="abaAtiva === 'conquistas'" (click)="mudarAba('conquistas')">
-            🏆 Conquistas
-        </button>
-        <button *ngIf="souAdmin && isOwner" [class.active]="abaAtiva === 'discord'" (click)="mudarAba('discord')">
-            👑 Painel Admin
-        </button>
-    </nav>
-
-    <main class="tab-content-area">
-
-        <section *ngIf="abaAtiva === 'avaliacoes'" class="fade-in">
-            <div class="reviews-feed">
-                <div class="review-item" *ngFor="let av of dados.avaliacoes">
-                    <div class="movie-poster">
-                        <img [src]="av.filme?.poster" alt="Poster" *ngIf="av.filme?.poster">
-                        <div class="no-poster" *ngIf="!av.filme?.poster">🎬</div>
-                    </div>
-                    <div class="review-content">
-                        <div class="review-header">
-                            <div class="title-group">
-                                <h4 class="movie-title">{{ av.filme?.titulo }}</h4>
-                                <span class="year">({{ av.filme?.ano }})</span>
-                            </div>
-                            <div class="rating-badge">⭐ {{ av.nota }}</div>
-                        </div>
-                        <div class="badges-mini" *ngIf="av.assistiria_novamente">
-                            <span class="rewatch-badge">↺ Assistiria Novamente</span>
-                        </div>
-                        <p class="review-text">"{{ av.comentario }}"</p>
-                        <div class="highlight-box" *ngIf="av.destaque">
-                            🔥 <strong>Destaque:</strong> {{ av.destaque }}
-                        </div>
-                        <span class="date">{{ av.created_at | date:'dd/MM/yyyy' }}</span>
-                    </div>
-                </div>
-
-                <div *ngIf="!dados.avaliacoes || dados.avaliacoes.length === 0" class="empty-state">
-                    <div class="icon">🍿</div>
-                    <p>{{ isOwner ? 'Você ainda não avaliou nenhum filme. Corra para o sofá!' : 'Este usuário ainda não
-                        avaliou nenhum filme.' }}</p>
-                </div>
-            </div>
-        </section>
-
-        <section *ngIf="abaAtiva === 'recados'" class="fade-in">
-            <div class="recados-grid">
-                <div class="recado-card" *ngFor="let recado of dados.recados_recebidos">
-                    <div class="recado-top">
-                        <span class="filme-alvo">🎬 {{ recado.filme_titulo }}</span>
-                        <span class="nota-amigo">Nota: {{ recado.nota }}</span>
-                    </div>
-                    <div class="balao-recado">
-                        "{{ recado.texto }}"
-                    </div>
-                    <div class="remetente">
-                        — Enviado por <strong>{{ recado.autor }}</strong>
-                    </div>
-                </div>
-            </div>
-
-            <div *ngIf="!dados.recados_recebidos || dados.recados_recebidos.length === 0" class="empty-state">
-                <div class="icon">📭</div>
-                <p>Ninguém enviou mensagens sobre as indicações ainda.</p>
-            </div>
-        </section>
-
-        <section *ngIf="abaAtiva === 'conquistas'" class="fade-in">
-            <div class="conquistas-grid">
-                <div class="conquista-card" [class.locked]="!dados.conquistas?.primeiro_play">
-                    <div class="icone">{{ dados.conquistas?.primeiro_play ? '🏆' : '🔒' }}</div>
-                    <h4>O Primeiro Play</h4>
-                    <p>Avalie o seu primeiro filme.</p>
-                </div>
-
-                <div class="conquista-card" [class.locked]="!dados.conquistas?.cinefilo_veterano">
-                    <div class="icone">{{ dados.conquistas?.cinefilo_veterano ? '🎖️' : '🔒' }}</div>
-                    <h4>Cinéfilo Veterano</h4>
-                    <p>Avalie 10 filmes no clube.</p>
-                </div>
-
-                <div class="conquista-card" [class.locked]="!dados.conquistas?.curador_polemico">
-                    <div class="icone">{{ dados.conquistas?.curador_polemico ? '🧨' : '🔒' }}</div>
-                    <h4>Curador Polêmico</h4>
-                    <p>Indique um filme que dividiu opiniões (Mín. 3 notas com 2.5 de diferença).</p>
-                </div>
-            </div>
-
-            <p *ngIf="!dados.conquistas?.primeiro_play && isOwner" class="coming-soon-text">
-                Assista ao seu primeiro filme para começar a desbloquear troféus!
-            </p>
-        </section>
-
-        <section *ngIf="abaAtiva === 'discord' && isOwner" class="fade-in">
-            <h2 class="section-title" style="color: #00ff88; border-left-color: #00ff88;">
-                👑 Painel de Administração
-            </h2>
-
-            <div class="admin-wrapper">
-
-                <div class="admin-simple-card">
-                    <div class="card-text">
-                        <h3>📅 Gestão de Ciclos</h3>
-                        <p>Gerencie meses, temas e encerre votações do clube.</p>
-                    </div>
-                    <button class="btn-goto" (click)="irParaCalendario()">Acessar Calendário</button>
-                </div>
-
-                <div class="discord-card">
-                    <h3>👾 O Oráculo (Discord)</h3>
-                    <p class="desc">
-                        Conecte o seu Clube ao Discord. O Oráculo avisará automaticamente a todos quando um ciclo for
-                        aberto, um filme for indicado ou uma nova crítica for postada!
-                    </p>
-
-                    <div class="input-group">
-                        <label>URL DO WEBHOOK</label>
-                        <input type="text" [(ngModel)]="webhookUrl" placeholder="https://discord.com/api/webhooks/...">
-                        <small *ngIf="webhookUrl" class="status-ok">✔ Oráculo conectado e ativo!</small>
-                    </div>
-
-                    <button class="btn-discord" (click)="salvarWebhook()">Salvar Integração</button>
-                </div>
-
-            </div>
-        </section>
-
-    </main>
-
-    <div class="modal-overlay" *ngIf="mostrarModalEdit && isOwner">
-        <div class="modal-content">
-            <h3>Editar Perfil</h3>
-            <div class="input-group">
-                <label>Nickname</label>
-                <input type="text" [(ngModel)]="formEdit.nickname">
-            </div>
-            <div class="input-group">
-                <label>URL da Foto (Avatar)</label>
-                <input type="text" [(ngModel)]="formEdit.url_foto_perfil">
-                <small>Deixe vazio para usar a letra inicial.</small>
-            </div>
-            <div class="modal-actions">
-                <button class="btn-cancel" (click)="fecharEdicao()">Cancelar</button>
-                <button class="btn-save" (click)="salvarEdicao()">Salvar</button>
-            </div>
-        </div>
+    <div class="stat-strip">
+      <div class="stat-tile">
+        <small>Avaliações publicadas</small><strong>{{ profile.stats.total_avaliacoes }}</strong>
+        <p>Suas impressões depois dos créditos.</p>
+      </div>
+      <div class="stat-tile">
+        <small>Filmes assistidos</small><strong>{{ profile.stats.total_filmes_assistidos }}</strong>
+        <p>Histórias que viraram conversa.</p>
+      </div>
+      <div class="stat-tile">
+        <small>Clube</small
+        ><strong class="profile-club-name">{{ profile.clube?.nome || 'Ainda sem clube' }}</strong>
+        <p>O ponto de encontro da turma.</p>
+      </div>
     </div>
+    <nav class="tabs" aria-label="Seções do perfil">
+      <a
+        [routerLink]="userId() ? ['/perfil', userId()] : ['/perfil']"
+        [queryParams]="{ aba: 'avaliacoes' }"
+        [class.active]="tab() === 'avaliacoes'"
+        [attr.aria-current]="tab() === 'avaliacoes' ? 'page' : null"
+        ><app-icon name="star" [size]="16" /> Avaliações</a
+      >
+      <a
+        [routerLink]="userId() ? ['/perfil', userId()] : ['/perfil']"
+        [queryParams]="{ aba: 'recados' }"
+        [class.active]="tab() === 'recados'"
+        [attr.aria-current]="tab() === 'recados' ? 'page' : null"
+        ><app-icon name="chat" [size]="16" /> Recados recebidos</a
+      >
+      @if (isOwner() && store.isAdmin()) {
+        <a
+          routerLink="/perfil"
+          [queryParams]="{ aba: 'clube' }"
+          [class.active]="tab() === 'clube'"
+          [attr.aria-current]="tab() === 'clube' ? 'page' : null"
+          ><app-icon name="shield" [size]="16" /> Configurações do clube</a
+        >
+      }
+    </nav>
+    <div class="split-layout">
+      <section [attr.aria-busy]="loading()">
+        @if (loading()) {
+          <app-state kind="loading" title="Atualizando o perfil…" />
+        } @else if (tab() === 'avaliacoes') {
+          @for (review of profile.avaliacoes; track review.id) {
+            <article class="review-card profile-review">
+              <img
+                appPoster
+                [src]="review.filme.poster || '/poster-placeholder.svg'"
+                [alt]="'Pôster de ' + review.filme.titulo"
+                width="72"
+                height="108"
+                loading="lazy"
+                decoding="async"
+              />
+              <div>
+                <div class="profile-review-header">
+                  <div>
+                    <h2>{{ review.filme.titulo }}</h2>
+                    <span class="review-meta">{{ review.filme.ano }}</span>
+                  </div>
+                  <span class="rating-pill"
+                    ><app-icon name="star" [size]="14" /> {{ review.nota | number: '1.1-1' }} /
+                    5</span
+                  >
+                </div>
+                @if (review.destaque) {
+                  <p class="review-highlight">{{ review.destaque }}</p>
+                }
+                <p class="review-text">{{ review.comentario }}</p>
+                <div class="review-footer">
+                  <time [attr.datetime]="review.created_at">{{
+                    review.created_at | date: 'dd/MM/yyyy'
+                  }}</time>
+                  @if (review.assistiria_novamente) {
+                    <span>Assistiria novamente</span>
+                  }
+                </div>
+              </div>
+            </article>
+          } @empty {
+            <app-state
+              title="Cada sessão tem uma primeira crítica"
+              [message]="
+                isOwner()
+                  ? 'Avalie um filme do ciclo para começar sua coleção de opiniões.'
+                  : 'As avaliações deste membro aparecerão aqui.'
+              "
+              ><a routerLink="/dashboard" class="btn btn-secondary">Ver o ciclo atual</a></app-state
+            >
+          }
+          <app-pagination
+            [page]="profile.pagination.page"
+            [perPage]="profile.pagination.per_page"
+            [total]="profile.pagination.total_avaliacoes"
+            label="avaliações"
+            (change)="changePage($event)"
+          />
+        } @else if (tab() === 'recados') {
+          @for (message of profile.recados_recebidos; track message.id) {
+            <article class="review-card">
+              <span class="eyebrow">Uma indicação que virou conversa</span>
+              <h2>{{ message.filme_titulo }}</h2>
+              <p class="review-meta">
+                De {{ message.autor }}
+                <span class="rating-pill">{{ message.nota | number: '1.1-1' }} / 5</span>
+              </p>
+              <p class="review-text">{{ message.texto }}</p>
+            </article>
+          } @empty {
+            <app-state
+              title="O papo continua por aqui"
+              message="Os recados deixados nas avaliações dos filmes que você indicou aparecerão nesta seção."
+            />
+          }
+          <app-pagination
+            [page]="profile.pagination.page"
+            [perPage]="profile.pagination.per_page"
+            [total]="profile.pagination.total_recados || 0"
+            label="recados"
+            (change)="changePage($event)"
+          />
+        } @else {
+          <section class="panel panel-padding settings-section">
+            <span class="eyebrow">Administração</span>
+            <h2>{{ store.club()?.nome }}</h2>
+            <p>Os temas e o andamento de cada mês ficam na área de ciclos.</p>
+            <a routerLink="/historico" class="btn btn-secondary"
+              ><app-icon name="calendar" [size]="17" /> Gerenciar ciclos</a
+            >
+          </section>
+          <section class="panel panel-padding settings-section">
+            <div class="settings-heading">
+              <div>
+                <span class="eyebrow">A conversa também no Discord</span>
+                <h2>Integração do clube</h2>
+              </div>
+              <span class="badge" [class.badge-green]="store.club()?.discord_configurado"
+                ><span class="status-dot"></span>
+                {{ store.club()?.discord_configurado ? 'Configurada' : 'Não configurada' }}</span
+              >
+            </div>
+            <p>
+              Receba avisos de novos ciclos, indicações e críticas no canal do seu clube. Por
+              segurança, a URL salva não é exibida.
+            </p>
+            @if (discordError() && !disconnecting()) {
+              <p class="form-error" role="alert">{{ discordError() }}</p>
+            }
+            <form [formGroup]="webhook" (ngSubmit)="saveDiscord()" novalidate>
+              <div class="field">
+                <label for="discord-webhook">{{
+                  store.club()?.discord_configurado ? 'Substituir URL do webhook' : 'URL do webhook'
+                }}</label
+                ><input
+                  id="discord-webhook"
+                  type="password"
+                  formControlName="url"
+                  autocomplete="off"
+                  placeholder="https://discord.com/api/webhooks/…"
+                />
+                @if (webhook.controls.url.invalid && webhook.controls.url.touched) {
+                  <small class="field-error"
+                    >Cole uma URL HTTPS válida de webhook do Discord.</small
+                  >
+                }
+                <small
+                  >A confirmação é enviada em segundo plano depois que a configuração é
+                  salva.</small
+                >
+              </div>
+              <div class="settings-actions">
+                @if (store.club()?.discord_configurado) {
+                  <button
+                    type="button"
+                    class="btn btn-danger"
+                    (click)="discordError.set(''); disconnecting.set(true)"
+                    [disabled]="discordSaving()"
+                  >
+                    Desconectar
+                  </button>
+                }
+                <button type="submit" class="btn btn-primary" [disabled]="discordSaving()">
+                  {{ discordSaving() ? 'Salvando…' : 'Salvar integração' }}
+                </button>
+              </div>
+            </form>
+          </section>
+        }
+      </section>
+      <aside class="profile-aside">
+        <section class="panel panel-padding">
+          <span class="eyebrow">Pequenos grandes marcos</span>
+          <h2>Conquistas</h2>
+          <div class="achievement" [class.achievement-locked]="!profile.conquistas.primeiro_play">
+            <app-icon name="ticket" [size]="22" />
+            <div>
+              <h3>Primeiro play</h3>
+              <p>
+                {{
+                  profile.conquistas.primeiro_play
+                    ? 'A primeira avaliação já faz parte da história.'
+                    : 'Publique sua primeira avaliação.'
+                }}
+              </p>
+            </div>
+          </div>
+          <div
+            class="achievement"
+            [class.achievement-locked]="!profile.conquistas.cinefilo_veterano"
+          >
+            <app-icon name="film" [size]="22" />
+            <div>
+              <h3>Cinéfilo veterano</h3>
+              <p>
+                {{
+                  profile.conquistas.cinefilo_veterano
+                    ? 'Dez avaliações e muitas boas sessões.'
+                    : 'Publique pelo menos 10 avaliações.'
+                }}
+              </p>
+            </div>
+          </div>
+          <div
+            class="achievement"
+            [class.achievement-locked]="!profile.conquistas.curador_polemico"
+          >
+            <app-icon name="chat" [size]="22" />
+            <div>
+              <h3>Curador de debates</h3>
+              <p>
+                {{
+                  profile.conquistas.curador_polemico
+                    ? 'Uma indicação sua dividiu opiniões.'
+                    : 'Uma indicação, três avaliações e opiniões bem diferentes.'
+                }}
+              </p>
+            </div>
+          </div>
+        </section>
+        @if (profile.clube; as club) {
+          <section class="panel panel-padding">
+            <span class="eyebrow">Sempre cabe mais uma conversa</span>
+            <h2>Convide para o clube</h2>
+            <p class="muted invite-description">
+              Compartilhe este código com quem vai assistir com vocês.
+            </p>
+            <div class="invite-code">
+              <input
+                type="text"
+                readonly
+                [value]="club.codigo"
+                aria-label="Código do clube"
+              /><button
+                type="button"
+                class="icon-button"
+                aria-label="Copiar código do clube"
+                (click)="copyCode()"
+              >
+                <app-icon name="ticket" [size]="18" />
+              </button>
+            </div>
+          </section>
+        }
+        @if (profile.amigos.length) {
+          <section class="panel panel-padding">
+            <h2>Gente da sua sessão</h2>
+            <div class="profile-friends">
+              @for (friend of profile.amigos; track friend.id) {
+                <a
+                  [routerLink]="
+                    friend.id === auth.user()?.id ? ['/perfil'] : ['/perfil', friend.id]
+                  "
+                  class="person-link"
+                  ><app-avatar [user]="friend" /><span>{{ friend.nickname }}</span></a
+                >
+              }
+            </div>
+          </section>
+        }
+      </aside>
+    </div>
+  }
 </div>
-
-<ng-template #loading>
-    <div class="loading-screen">Carregando Perfil...</div>
-</ng-template>
+@if (editing()) {
+  <app-dialog title="Editar meu perfil" [busy]="saving()" (closed)="editing.set(false)">
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+      @if (saveError()) {
+        <p class="form-error" role="alert">{{ saveError() }}</p>
+      }
+      <div class="field">
+        <label for="edit-name">Seu nome</label
+        ><input
+          id="edit-name"
+          formControlName="nome"
+          autocomplete="name"
+          maxlength="150"
+          required
+        /><app-field-error [control]="form.controls.nome" />
+      </div>
+      <div class="field">
+        <label for="edit-nickname">Nome no clube</label
+        ><input
+          id="edit-nickname"
+          formControlName="nickname"
+          autocomplete="nickname"
+          maxlength="50"
+          required
+        /><app-field-error [control]="form.controls.nickname" />
+      </div>
+      <div class="field">
+        <label for="edit-email">Email</label
+        ><input
+          id="edit-email"
+          type="email"
+          formControlName="email"
+          autocomplete="email"
+          maxlength="254"
+          required
+        /><app-field-error [control]="form.controls.email" />
+      </div>
+      <div class="field">
+        <label for="edit-photo">Foto do perfil <span class="muted">(link opcional)</span></label
+        ><input
+          id="edit-photo"
+          type="url"
+          formControlName="url_foto_perfil"
+          placeholder="https://…"
+          maxlength="2048"
+        /><small>Deixe vazio para usar a inicial do seu nome no clube.</small
+        ><app-field-error [control]="form.controls.url_foto_perfil" />
+      </div>
+      <div class="dialog-actions">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="editing.set(false)"
+          [disabled]="saving()"
+        >
+          Cancelar</button
+        ><button type="submit" class="btn btn-primary" [disabled]="saving()">
+          {{ saving() ? 'Salvando…' : 'Salvar perfil' }}
+        </button>
+      </div>
+    </form>
+  </app-dialog>
+}
+@if (disconnecting()) {
+  <app-confirm
+    title="Desconectar o Discord?"
+    message="O clube deixará de enviar novos avisos para o canal. Você pode configurar a integração novamente depois."
+    label="Desconectar"
+    [destructive]="true"
+    [pending]="discordSaving()"
+    [error]="discordError()"
+    (cancel)="disconnecting.set(false)"
+    (confirm)="updateDiscord(null)"
+  />
+}

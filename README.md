@@ -9,8 +9,8 @@ Plataforma para clubes de cinema com catálogo colaborativo, avaliações em gru
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Ruby_on_Rails-7-red" />
-  <img src="https://img.shields.io/badge/Angular-17-dd0031" />
+  <img src="https://img.shields.io/badge/Ruby_on_Rails-8.1-red" />
+  <img src="https://img.shields.io/badge/Angular-21-dd0031" />
   <img src="https://img.shields.io/badge/PostgreSQL-15-blue" />
   <img src="https://img.shields.io/badge/Docker-Ready-2496ED" />
   <img src="https://img.shields.io/badge/License-MIT-green" />
@@ -46,7 +46,7 @@ Arquitetura separada em frontend e backend desacoplados, containerizados com Doc
 ## 🚀 Stack Tecnológica
 
 ### Backend
-- Ruby on Rails 7 (API Mode)
+- Ruby on Rails 8.1 (API Mode)
 - PostgreSQL 15
 - Active Record
 - REST API
@@ -84,110 +84,65 @@ Arquitetura separada em frontend e backend desacoplados, containerizados com Doc
 
 ---
 
-## 🛠 Pré-requisitos
+## Executar com Docker Desktop
 
-Instale:
+O Docker Desktop com containers Linux é o único pré-requisito. Ruby, Node e PostgreSQL são instalados nas imagens.
 
-- Docker  
-- Docker Compose  
+Na pasta raiz do projeto, execute uma vez:
+
+```powershell
+docker compose up --build -d --wait --wait-timeout 300
+```
+
+A primeira execução baixa as dependências e pode demorar. Depois, acesse **http://localhost:4200**. A API fica em http://localhost:3000/up e o PostgreSQL em localhost:5435.
+
+Os quatro serviços usam `restart: always`: depois de criados, voltam a iniciar sempre que o Docker Desktop iniciar. Se quiser iniciar também ao entrar no Windows, ative **Start Docker Desktop when you sign in to your computer** nas configurações gerais do Docker Desktop.
+
+A API espera o PostgreSQL ficar disponível e executa `rails db:prepare`, criando o banco e aplicando migrações pendentes. Os dados do PostgreSQL, os uploads e os arquivos temporários da API ficam em volumes persistentes. O código fica nas imagens; depois de alterar o código, execute novamente o comando acima.
+
+### Configuração opcional e busca de filmes
+
+O projeto sobe sem `.env`, usando configurações locais de desenvolvimento. Para habilitar a busca de filmes no TMDB:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Preencha `TMDB_API_KEY` no `.env` e aplique:
+
+```powershell
+docker compose up -d
+```
+
+A chave TMDB é usada pelo Angular e fica visível no navegador. O Docker gera `environment.ts` automaticamente dentro do container. Sem a chave, a aplicação inicia, mas a busca no TMDB não funciona.
+
+A senha padrão local do PostgreSQL é `trinity_local`. Se já existir um volume de banco com outra senha, informe a senha original em `DATABASE_PASSWORD` no `.env`; alterar essa variável não troca a senha de um banco existente. As portas são publicadas apenas no computador local. Esta configuração é para desenvolvimento local.
+
+O serviço adicional `jobs` processa notificações do Discord em segundo plano. Veja [as regras, paginação e testes do back-end](backend-api/README.md).
+
+### Comandos úteis
+
+```powershell
+# Estado e logs
+docker compose ps
+docker compose logs -f
+docker compose logs -f api
+docker compose logs -f web
+
+# Parar agora; volta a iniciar quando o Docker Desktop reiniciar
+docker compose stop
+
+# Iniciar novamente manualmente
+docker compose up -d
+
+# Remover containers e desativar a inicialização automática
+# Mantém os volumes; para reativar, execute docker compose up -d
+docker compose down
+```
+
+Não use `docker compose down -v` se quiser manter os dados: a opção `-v` apaga os volumes do projeto.
 
 ---
-
-## ⚙️ Configuração
-
-### 1. Variáveis do projeto
-
-Copie:
-
-```bash
-cp .env.example .env
-```
-
-Configure:
-
-```env
-DATABASE_PASSWORD=sua_senha_aqui
-FRONTEND_URL=http://localhost:4200
-```
-
----
-
-### 2. Configurar TMDB
-
-Crie:
-
-```bash
-frontend-app/src/environments/environment.ts
-```
-
-Conteúdo:
-
-```ts
-export const environment = {
-  production: false,
-  tmdbApiKey: 'SUA_CHAVE_TMDB',
-  apiUrl: 'http://localhost:3000'
-};
-```
-
----
-
-## ▶️ Executando o projeto
-
-Subir containers:
-
-```bash
-docker-compose up --build -d
-```
-
----
-
-## 🔗 Portas
-
-Frontend:
-
-```bash
-http://localhost:4200
-```
-
-Backend:
-
-```bash
-http://localhost:3000
-```
-
-PostgreSQL:
-
-```bash
-localhost:5435
-```
-
----
-
-## 📖 Comandos úteis
-
-Logs:
-
-```bash
-docker-compose logs -f
-docker-compose logs -f api
-docker-compose logs -f web
-```
-
-Parar:
-
-```bash
-docker-compose stop
-```
-
-Derrubar containers:
-
-```bash
-docker-compose down
-```
-
----
-
 ## 💡 Objetivo do Projeto
 
 Projeto pessoal para estudo de arquitetura full stack, APIs, integração entre serviços e experiência colaborativa para comunidades de cinema.

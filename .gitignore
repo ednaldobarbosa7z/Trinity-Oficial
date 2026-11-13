@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+.local-backups/
 
 # Ignorar pastas de editores e Sistema Operacional
 .vscode/

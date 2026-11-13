@@ -1,94 +1,185 @@
-<div class="calendar-container">
-  <header class="calendar-header">
-    <button class="nav-btn" (click)="mudarAno(-1)" [disabled]="anoSelecionado <= minAno">❮</button>
-    <h1 class="year-display">{{ anoSelecionado }}</h1>
-    <button class="nav-btn" (click)="mudarAno(1)" [disabled]="anoSelecionado >= maxAno">❯</button>
-  </header>
-
-  <div class="calendar-grid">
-    <div *ngFor="let mes of meses" class="month-card" [class.active]="mes.dados !== null" (click)="abrirMes(mes)">
-      <span class="month-number">{{ mes.numero | number:'2.0' }}</span>
-      <div class="month-info">
-        <h3>{{ mes.nome }}</h3>
-
-        <ng-container *ngIf="mes.dados; else semCiclo">
-          <p class="theme-label" *ngIf="mes.dados.tema">
-            🎭 {{ mes.dados.tema }}
-          </p>
-          <span class="status-label open" *ngIf="mes.dados.status === 'ABERTO'">🔓 Aberto</span>
-          <span class="status-label" *ngIf="mes.dados.status !== 'ABERTO'">🔒 Finalizado</span>
-        </ng-container>
-
-        <ng-template #semCiclo>
-          <span class="status-label">🔒 Sem atividade</span>
-        </ng-template>
-      </div>
+<div class="page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow"><span class="line"></span> Um mês, novas descobertas</span>
+      <h1>Os capítulos do clube.</h1>
+      <p>Acompanhe os temas, as indicações e os ciclos que fizeram parte da história de vocês.</p>
     </div>
-  </div>
-
-  <div class="modal-overlay" *ngIf="mostrarModalGestao">
-    <div class="modal-gestao" (click)="$event.stopPropagation()">
-      <header class="modal-header">
-        <h2>{{ mesSelecionadoNome }} {{ anoSelecionado }}</h2>
-        <button class="btn-close" (click)="mostrarModalGestao = false">✖</button>
-      </header>
-
-      <div class="modal-body" *ngIf="cicloSelecionado?.id; else semCicloModal">
-
-        <div class="admin-panel" *ngIf="souAdmin">
-          <div class="settings-row">
-            <div class="input-group">
-              <label>TEMA DO MÊS</label>
-              <input type="text" [(ngModel)]="cicloSelecionado.tema" placeholder="Ex: Clássicos do Terror">
+    @if (store.isAdmin()) {
+      <button type="button" class="btn btn-primary" (click)="creating.set(true)">
+        <app-icon name="plus" [size]="17" /> Novo ciclo
+      </button>
+    }
+  </header>
+  @if (loading()) {
+    <app-state kind="loading" title="Organizando a linha do tempo…" />
+  } @else if (error()) {
+    <app-state kind="error" title="Os ciclos não carregaram" [message]="error()" (retry)="load()" />
+  } @else if (data(); as result) {
+    <div class="cycle-grid">
+      @for (cycle of result.items; track cycle.id) {
+        <button
+          type="button"
+          class="cycle-card panel"
+          (click)="open(cycle)"
+          [attr.aria-label]="'Ver ciclo de ' + months[cycle.mes - 1] + ' de ' + cycle.ano"
+        >
+          <div class="cycle-card-top">
+            <app-icon name="calendar" [size]="23" /><span
+              class="badge"
+              [class.badge-green]="cycle.status === 'ABERTO'"
+              >{{ statusLabel(cycle.status) }}</span
+            >
+          </div>
+          <span class="cycle-year">{{ cycle.ano }}</span>
+          <h2>{{ months[cycle.mes - 1] }}</h2>
+          <p>{{ cycle.tema || 'Tema livre, boas histórias.' }}</p>
+          <footer>
+            <span
+              >{{ cycle.qtd_slots }} {{ cycle.qtd_slots === 1 ? 'indicação' : 'indicações' }}</span
+            ><span>Ver ciclo <app-icon name="arrow" [size]="16" /></span>
+          </footer>
+        </button>
+      } @empty {
+        <app-state
+          title="A primeira seleção está por vir"
+          message="Os ciclos aparecerão aqui assim que o administrador abrir o primeiro mês."
+        />
+      }
+    </div>
+    <app-pagination
+      [page]="result.page"
+      [perPage]="result.perPage"
+      [total]="result.total"
+      label="ciclos"
+      (change)="changePage($event)"
+    />
+  }
+</div>
+@if (selected(); as cycle) {
+  <app-dialog
+    [title]="months[cycle.mes - 1] + ' de ' + cycle.ano"
+    [wide]="true"
+    [busy]="saving() || deleting()"
+    (closed)="close()"
+  >
+    @if (detailLoading()) {
+      <app-state kind="loading" title="Abrindo as indicações…" />
+    } @else if (detailError()) {
+      <app-state
+        kind="error"
+        title="Não foi possível abrir este ciclo"
+        [message]="detailError()"
+        (retry)="retryDetails()"
+      />
+    } @else if (details(); as detail) {
+      @if (success()) {
+        <p class="inline-note" role="status">{{ success() }}</p>
+      }
+      <div class="cycle-detail-heading">
+        <div>
+          <span class="eyebrow">Tema do ciclo</span>
+          <h3>{{ detail.tema || 'Tema livre' }}</h3>
+        </div>
+        <span class="badge" [class.badge-green]="detail.status === 'ABERTO'">{{
+          statusLabel(detail.status)
+        }}</span>
+      </div>
+      <div class="cycle-slots">
+        @for (slot of detail.slots; track slot.id) {
+          <article class="cycle-slot">
+            <span class="slot-position">{{ slot.posicao }}</span>
+            @if (slot.filme; as film) {
+              <img
+                appPoster
+                [src]="film.poster || '/poster-placeholder.svg'"
+                [alt]="'Pôster de ' + film.titulo"
+                width="42"
+                height="63"
+              />
+            } @else {
+              <span class="slot-placeholder"><app-icon name="film" [size]="19" /></span>
+            }
+            <div>
+              <h3>{{ slot.filme?.titulo || 'Aguardando indicação' }}</h3>
+              <p>{{ slot.user?.nickname || 'Vaga sem responsável' }}</p>
             </div>
-            <div class="input-group">
-              <label>STATUS DO CICLO</label>
-              <select [(ngModel)]="cicloSelecionado.status">
-                <option value="ABERTO">ABERTO (Permite trocas)</option>
-                <option value="FECHADO">FECHADO (Apenas leitura)</option>
+            @if (store.isAdmin() && detail.status === 'ABERTO' && slot.filme) {
+              <button
+                type="button"
+                class="icon-button"
+                [attr.aria-label]="'Remover indicação ' + slot.filme.titulo"
+                (click)="askRemoveFilm(slot.id, slot.filme.titulo)"
+                [disabled]="saving()"
+              >
+                <app-icon name="trash" [size]="16" />
+              </button>
+            }
+          </article>
+        }
+      </div>
+      @if (store.isAdmin()) {
+        <hr class="divider" />
+        <h3 class="admin-heading"><app-icon name="shield" [size]="17" /> Administração do ciclo</h3>
+        <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+          @if (saveError()) {
+            <p class="form-error" role="alert">{{ saveError() }}</p>
+          }
+          <div class="field-row">
+            <div class="field">
+              <label for="edit-cycle-theme">Tema</label
+              ><input
+                id="edit-cycle-theme"
+                formControlName="tema"
+                maxlength="500"
+              /><app-field-error [control]="form.controls.tema" />
+            </div>
+            <div class="field">
+              <label for="edit-cycle-status">Status</label
+              ><select id="edit-cycle-status" formControlName="status">
+                <option value="ABERTO">Aberto</option>
+                <option value="FECHADO">Encerrado</option>
+                <option value="AGUARDANDO">Aguardando</option>
               </select>
             </div>
           </div>
-
-          <div class="admin-actions">
-            <button class="btn-update-main" (click)="salvarAlteracoesAdmin()">Atualizar Ciclo</button>
-            <button class="btn-delete-main" (click)="limparCicloAdmin()">Limpar Ciclo</button>
+          <p class="muted admin-hint">
+            Ao encerrar, o ciclo deixa de aceitar novas indicações e avaliações.
+          </p>
+          <div class="cycle-admin-actions">
+            <button
+              type="button"
+              class="btn btn-danger"
+              (click)="askDeleteCycle()"
+              [disabled]="saving()"
+            >
+              <app-icon name="trash" [size]="15" /> Excluir ciclo
+            </button>
+            <button type="submit" class="btn btn-primary" [disabled]="saving()">
+              {{ saving() ? 'Salvando…' : 'Salvar alterações' }}
+            </button>
           </div>
-        </div>
-
-        <div class="slots-grid">
-          <div class="slot-card-admin" *ngFor="let slot of cicloSelecionado.slots">
-            <div class="slot-header">
-              <span class="pos">Slot #{{ slot.posicao }}</span>
-              <span class="user">@{{ slot.user.nickname }}</span>
-            </div>
-
-            <div class="slot-visual">
-              <div *ngIf="slot.filme" class="poster-container">
-                <img [src]="slot.filme.poster" alt="Poster">
-
-                <div class="admin-actions-overlay" *ngIf="souAdmin && cicloSelecionado.status !== 'FECHADO'">
-                  <button class="action-btn delete" (click)="removerFilmeAdmin(slot)" title="Remover Filme">🗑️</button>
-                </div>
-              </div>
-
-              <div *ngIf="!slot.filme" class="empty-state">
-                <div class="icon">⏳</div>
-                <p>Aguardando indicação...</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <ng-template #semCicloModal>
-        <div class="empty-modal-state">
-          <div class="icon">📅</div>
-          <p>Nenhum ciclo ativo para este período.</p>
-        </div>
-      </ng-template>
-    </div>
-  </div>
-
-</div>
+        </form>
+      }
+    }
+  </app-dialog>
+}
+@if (creating() && store.club(); as club) {
+  <app-cycle-form
+    [clubId]="store.club()!.id"
+    (closed)="creating.set(false)"
+    (saved)="savedCycle()"
+  />
+}
+@if (confirmation(); as action) {
+  <app-confirm
+    [title]="action.title"
+    [message]="action.message"
+    [label]="action.kind === 'cycle' ? 'Excluir ciclo' : 'Remover indicação'"
+    [destructive]="true"
+    [pending]="deleting()"
+    [error]="deleteError()"
+    (cancel)="confirmation.set(null)"
+    (confirm)="confirmDelete()"
+  />
+}

@@ -27,9 +27,9 @@ class ResetEstruturaCiclos < ActiveRecord::Migration[7.1]
       t.references :ciclo, null: false, foreign_key: true
       t.references :user, null: false, foreign_key: true # O Dono da indicação (Sorteado)
       t.references :filme, foreign_key: true, null: true # O Filme escolhido (começa vazio)
-      
+
       t.integer :posicao # 1, 2, 3, 4 (Ordem de exibição)
-      
+
       t.timestamps
     end
   end

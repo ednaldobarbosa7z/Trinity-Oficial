@@ -1,286 +1,160 @@
-/* --- CONFIGURAÇÕES GERAIS --- */
-* {
-    box-sizing: border-box;
+:host {
+  display: block;
+  position: sticky;
+  top: 0;
+  z-index: 40;
 }
-
-/* --- BARRA DE NAVEGAÇÃO --- */
-.navbar {
-    background: #1e1e1e;
-    border-bottom: 1px solid #333;
-    padding: 0 2rem;
-    height: 70px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+.site-header {
+  background: rgb(13 17 15 / 94%);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
 }
-
-/* Logo */
-.logo-area {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    height: 100%;
-
-    .nav-logo {
-        height: 55px; // Altura ideal para a navbar de 70px
-        width: auto;
-        object-fit: contain;
-        transition: transform 0.2s;
-
-        &:hover {
-            transform: scale(1.05);
-        }
-    }
+.header-inner {
+  max-width: 1344px;
+  padding: 0 32px;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  min-height: 88px;
 }
-
-/* Container dos Links */
-.nav-links {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
+.brand {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
-
-/* --- LINKS DE NAVEGAÇÃO --- */
-.nav-item {
-    text-decoration: none;
-    color: #aaa;
-    font-size: 0.95rem;
-    font-weight: 600;
-    transition: color 0.2s;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    position: relative;
-    padding: 5px 0;
-
-    &:hover {
-        color: white;
-    }
-
-    &class.active {
-        color: #00ff88;
-
-        &::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: #00ff88;
-        }
-    }
+.brand img {
+  width: 138px;
+  height: auto;
 }
-
-/* Botão Adicionar Filme (Destaque) */
-.nav-item.highlight {
-    background: #007bff;
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    gap: 6px;
-
-    &:hover {
-        background: #0056b3;
-    }
-
-    &.active::after {
-        display: none;
-    }
+.primary-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: auto;
 }
-
-/* --- PERFIL DROPDOWN --- */
-.profile-dropdown {
-    position: relative;
-    cursor: pointer;
-    margin-left: 15px;
+.primary-nav a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 15px;
+  color: var(--muted);
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
-
-.profile-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: #e0e0e0;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 5px 15px 5px 5px;
-    border-radius: 30px;
-    border: 1px solid #333;
-    transition: all 0.2s;
-
-    &:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: #666;
-    }
+.primary-nav a:hover {
+  background: var(--surface-hover);
+  color: var(--text);
 }
-
-.btn-notification {
-    background: transparent;
-    border: none;
-    font-size: 1.1rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    padding: 0;
-    margin-right: 5px;
-    transition: transform 0.2s;
-
-    &:hover {
-        transform: scale(1.1);
-    }
+.primary-nav a.active {
+  color: var(--accent);
+  background: var(--accent-soft);
 }
-
-.avatar-circle {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: #333;
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border: 2px solid #555;
-    color: white;
-    font-weight: bold;
-
-    img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
+.account {
+  position: relative;
+  margin-left: auto;
 }
-
-.username {
-    font-weight: 600;
-    font-size: 0.9rem;
+.account-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 28px;
+  color: var(--text);
+  padding: 5px 12px 5px 5px;
 }
-
-.arrow {
-    font-size: 0.7rem;
-    color: #888;
+.account-name {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.82rem;
+  white-space: nowrap;
 }
-
-/* --- MENU FLUTUANTE (ABERTO) --- */
-.dropdown-menu {
-    position: absolute;
-    top: 130%;
-    right: 0;
-    width: 200px;
-    background: #25262b;
-    border: 1px solid #444;
-    border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    padding: 5px;
-    z-index: 2000;
-    display: flex;
-    flex-direction: column;
-    animation: fadeIn 0.2s ease;
-
-    &::before {
-        content: '';
-        position: absolute;
-        top: -6px;
-        right: 20px;
-        width: 100%;
-        width: 10px;
-        height: 10px;
-        background: #25262b;
-        border-top: 1px solid #444;
-        border-left: 1px solid #444;
-        transform: rotate(45deg);
-    }
+.account-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 270px;
+  padding: 10px;
+  background: #1b231d;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
-
-.dropdown-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 15px;
-    color: #ccc;
-    text-decoration: none;
-    font-size: 0.95rem;
-    font-weight: 500;
-    transition: background 0.2s;
-    cursor: pointer;
-    background: transparent;
-    border: none;
+.account-menu a,
+.account-menu button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  font-size: 0.88rem;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 0;
+  text-align: left;
+  color: var(--text);
+}
+.account-menu a:hover,
+.account-menu button:hover {
+  background: var(--surface-hover);
+}
+.menu-caption {
+  display: block;
+  color: var(--muted);
+  padding: 8px 12px 12px;
+  font-size: 0.74rem;
+}
+.account-menu .logout {
+  color: var(--danger);
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  margin-top: 5px;
+}
+@media (max-width: 900px) {
+  .header-inner {
+    padding: 12px 20px 0;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .brand img {
+    width: 113px;
+  }
+  .primary-nav {
+    order: 3;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     width: 100%;
-    text-align: left;
-    border-radius: 4px;
-
-    .icon {
-        font-size: 1.1rem;
-    }
-
-    &:hover {
-        background: rgba(255, 255, 255, 0.05);
-        color: white;
-    }
-
-    &.danger {
-        color: #ff5555;
-
-        &:hover {
-            background: rgba(255, 85, 85, 0.1);
-        }
-    }
+    gap: 4px;
+    padding-top: 6px;
+  }
+  .primary-nav a {
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px 3px;
+    border-radius: 8px 8px 0 0;
+    font-size: 0.71rem;
+  }
+  .primary-nav a span {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
+  }
+  .account-trigger {
+    min-height: 40px;
+  }
 }
-
-.divider {
-    height: 1px;
-    background: #333;
-    margin: 4px 0;
-}
-
-.btn-simple-logout {
-    background: transparent;
-    border: 1px solid #555;
-    color: #ccc;
-    padding: 0.5rem 1.2rem;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.2s;
-
-    &:hover {
-        background: #333;
-        color: #ff4d4d;
-        border-color: #ff4d4d;
-    }
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Responsividade */
-@media (max-width: 768px) {
-    .navbar {
-        padding: 0 1rem;
-    }
-
-    .text-mobile-hide,
-    .username,
-    .arrow {
-        display: none;
-    }
-
-    .nav-item {
-        font-size: 0.85rem;
-    }
-
-    .nav-logo {
-        height: 35px; // Logo menor no mobile
-    }
+@media (max-width: 380px) {
+  .account-name {
+    max-width: 80px;
+  }
+  .header-inner {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
 }

@@ -1,74 +1,129 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
+import { tap } from 'rxjs';
+import { environment } from '../../environments/environment';
+import { RegisterInput, Session, User } from '../models/api.models';
+import { tokenPayload } from '../core/utils';
+import { NotificationsService } from './notifications.service';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class AuthService {
+  private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+  private readonly notices = inject(NotificationsService);
+  private readonly token = signal<string | null>(this.read('auth_token'));
+  readonly user = signal<User | null>(null);
+  readonly authenticated = computed(() => !!this.token() && !!this.user());
+  private expiryTimer?: ReturnType<typeof setTimeout>;
 
-  // Endereço do seu Backend Rails
-  private apiUrl = 'http://localhost:3000';
-
-  // PADRONIZAÇÃO DAS CHAVES
-  private readonly KEY_TOKEN = 'auth_token';
-  private readonly KEY_USER = 'usuario_dados';
-
-  constructor(private http: HttpClient, private router: Router) { }
-
-  // --- REGISTRO ---
-  register(userData: any): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/users`, { user: userData });
+  constructor() {
+    const payload = tokenPayload(this.token());
+    if (payload && payload.exp * 1000 > Date.now()) {
+      try {
+        const stored: unknown = JSON.parse(this.read('usuario_dados') || 'null');
+        const user = stored as Partial<User> | null;
+        this.user.set(
+          user && user.id === payload.user_id && typeof user.nickname === 'string'
+            ? this.sanitize(user as User)
+            : { id: payload.user_id, nome: '', nickname: 'Você', url_foto_perfil: null },
+        );
+        this.write('usuario_dados', JSON.stringify(this.user()));
+        this.scheduleExpiry(payload.exp);
+      } catch {
+        this.clear();
+      }
+    } else this.clear();
   }
 
-  // --- LOGIN ---
-  login(credentials: any): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/auth/login`, credentials).pipe(
-      tap(response => {
-        if (response.token) {
-          this.saveToken(response.token);
-        }
-        if (response.user) {
-          this.saveUser(response.user);
-        }
+  login(email: string, password: string) {
+    return this.http
+      .post<Session>(environment.apiUrl + '/auth/login', {
+        email: email.trim().toLowerCase(),
+        password,
       })
+      .pipe(tap((session) => this.accept(session)));
+  }
+  register(user: RegisterInput) {
+    return this.http
+      .post<Session>(environment.apiUrl + '/users', { user })
+      .pipe(tap((session) => this.accept(session)));
+  }
+  getToken(): string | null {
+    const value = this.token();
+    const payload = tokenPayload(value);
+    return payload && payload.exp * 1000 > Date.now() ? value : null;
+  }
+  isAuthenticated(): boolean {
+    return !!this.getToken() && !!this.user();
+  }
+  updateUser(value: User): void {
+    const current = this.user();
+    const sanitized = this.sanitize({
+      ...current,
+      ...value,
+      has_club: value.has_club ?? current?.has_club,
+    });
+    this.user.set(sanitized);
+    this.write('usuario_dados', JSON.stringify(sanitized));
+  }
+  expire(): void {
+    if (!this.token()) return;
+    this.clear();
+    this.notices.show('Sua sessão expirou. Entre novamente para continuar.', 'info');
+    void this.router.navigate(['/login'], { queryParams: { redirect: this.router.url } });
+  }
+  logout(): void {
+    this.clear();
+    void this.router.navigateByUrl('/login');
+  }
+
+  private accept(session: Session): void {
+    const payload = tokenPayload(session.token);
+    if (!payload || payload.exp * 1000 <= Date.now() || payload.user_id !== session.user.id) {
+      throw new Error('Resposta de sessão inválida.');
+    }
+    this.token.set(session.token);
+    this.write('auth_token', session.token);
+    this.updateUser(session.user);
+    this.scheduleExpiry(payload.exp);
+  }
+  private clear(): void {
+    clearTimeout(this.expiryTimer);
+    this.token.set(null);
+    this.user.set(null);
+    this.write('auth_token', null);
+    this.write('usuario_dados', null);
+  }
+  private scheduleExpiry(exp: number): void {
+    clearTimeout(this.expiryTimer);
+    this.expiryTimer = setTimeout(
+      () => this.expire(),
+      Math.min(exp * 1000 - Date.now(), 2147483647),
     );
   }
-
-  // --- GERENCIAMENTO DE SESSÃO ---
-
-  saveToken(token: string) {
-    localStorage.setItem(this.KEY_TOKEN, token);
+  private sanitize(user: User): User {
+    return {
+      id: user.id,
+      nome: user.nome || '',
+      nickname: user.nickname,
+      email: user.email,
+      url_foto_perfil: user.url_foto_perfil || null,
+      has_club: user.has_club,
+    };
   }
-
-  getToken(): string | null {
-    return localStorage.getItem(this.KEY_TOKEN);
+  private read(key: string): string | null {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
   }
-
-  saveUser(user: any) {
-    localStorage.setItem(this.KEY_USER, JSON.stringify(user));
-  }
-
-  // Método interno para pegar dados brutos
-  getUser() {
-    const userStr = localStorage.getItem(this.KEY_USER);
-    return userStr ? JSON.parse(userStr) : null;
-  }
-
-  // ✅ NOVO: Alias para corrigir o erro no componente
-  getCurrentUser() {
-    return this.getUser();
-  }
-
-  isAuthenticated(): boolean {
-    const token = this.getToken();
-    return !!token;
-  }
-
-  logout() {
-    localStorage.removeItem(this.KEY_TOKEN);
-    localStorage.removeItem(this.KEY_USER);
-    this.router.navigate(['/login']);
+  private write(key: string, value: string | null): void {
+    try {
+      value === null ? localStorage.removeItem(key) : localStorage.setItem(key, value);
+    } catch {
+      /* Session remains in memory. */
+    }
   }
 }

@@ -1,52 +1,64 @@
-// 1. Adicione o ChangeDetectorRef na importação
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
-import { CommonModule } from '@angular/common';
-import { EstatisticasService } from '../../services/estatisticas.service';
-import { EstatisticasClube } from '../../models/estatisticas.model';
-
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Subject, catchError, finalize, of, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ApiService } from '../../services/api.service';
+import { Statistics } from '../../models/api.models';
+import { AvatarComponent, IconComponent, PosterDirective, StateComponent } from '../../shared/ui';
+import { errorMessage } from '../../core/utils';
 @Component({
   selector: 'app-estatisticas',
   standalone: true,
-  imports: [CommonModule],
+  imports: [
+    DecimalPipe,
+    RouterLink,
+    AvatarComponent,
+    IconComponent,
+    PosterDirective,
+    StateComponent,
+  ],
   templateUrl: './estatisticas.html',
-  styleUrls: ['./estatisticas.scss']
+  styleUrl: './estatisticas.scss',
 })
 export class EstatisticasComponent implements OnInit {
-  estatisticas: EstatisticasClube | null = null;
-  carregando: boolean = true;
-
-  constructor(
-    private route: ActivatedRoute,
-    private estatisticasService: EstatisticasService,
-    private cdr: ChangeDetectorRef // 2. Injete ele aqui no construtor
-  ) { }
-
+  private readonly api = inject(ApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroy = inject(DestroyRef);
+  readonly data = signal<Statistics | null>(null);
+  readonly loading = signal(true);
+  readonly error = signal('');
+  private readonly requests = new Subject<number>();
+  private clubId = 0;
   ngOnInit(): void {
-    const clubeId = Number(this.route.snapshot.paramMap.get('id'));
-
-    if (clubeId) {
-      this.carregarEstatisticas(clubeId);
-    } else {
-      console.error('ERRO: ID do clube não foi encontrado na rota!');
-      this.carregando = false;
-    }
-  }
-
-  carregarEstatisticas(clubeId: number): void {
-    this.estatisticasService.getEstatisticasClube(clubeId).subscribe({
-      next: (dados) => {
-        this.estatisticas = dados;
-        this.carregando = false;
-
-        // 3. A MÁGICA AQUI: Força o Angular a tirar o loading e desenhar o pódio!
-        this.cdr.detectChanges();
-      },
-      error: (erro) => {
-        console.error('Erro na requisição:', erro);
-        this.carregando = false;
-        this.cdr.detectChanges(); // Força a tela a destravar em caso de erro também
+    this.requests
+      .pipe(
+        switchMap((id) => {
+          this.loading.set(true);
+          this.error.set('');
+          return this.api.statistics(id).pipe(
+            catchError((error: unknown) => {
+              this.error.set(errorMessage(error));
+              return of(null);
+            }),
+            finalize(() => this.loading.set(false)),
+          );
+        }),
+        takeUntilDestroyed(this.destroy),
+      )
+      .subscribe((data) => this.data.set(data));
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroy)).subscribe((params) => {
+      const id = params.get('id') || '';
+      if (!/^[1-9]\d*$/.test(id)) {
+        this.loading.set(false);
+        this.error.set('Este clube não está disponível.');
+        return;
       }
+      this.clubId = Number(id);
+      this.load();
     });
+  }
+  load(): void {
+    if (this.clubId) this.requests.next(this.clubId);
   }
 }

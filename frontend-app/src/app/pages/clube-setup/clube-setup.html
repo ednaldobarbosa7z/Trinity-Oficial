@@ -1,55 +1,101 @@
-<div class="setup-container">
-  <div class="setup-card">
-    <h2>Bem-vindo!</h2>
-    <p class="subtitle">Você ainda não participa de nenhum Clube de Filmes.</p>
-
-    <div class="tabs">
-      <button 
-        [class.active]="activeTab === 'criar'" 
-        (click)="activeTab = 'criar'; errorMessage = ''">
-        Criar Novo Clube
-      </button>
-      <button 
-        [class.active]="activeTab === 'entrar'" 
-        (click)="activeTab = 'entrar'; errorMessage = ''">
-        Tenho um Código
-      </button>
-    </div>
-
-    <div *ngIf="activeTab === 'criar'" class="tab-content">
-      <div class="form-group">
-        <label>Nome do Clube</label>
-        <input type="text" [(ngModel)]="novoClube.nome" placeholder="Ex: Cinéfilos da Madrugada">
-      </div>
-
-      <div class="form-group">
-        <label>Descrição (Opcional)</label>
-        <textarea [(ngModel)]="novoClube.descricao" placeholder="Qual o foco do grupo?"></textarea>
-      </div>
-
-      <div class="form-group">
-        <label>URL da Foto (Opcional)</label>
-        <input type="text" [(ngModel)]="novoClube.foto_clube" placeholder="http://...">
-      </div>
-
-      <button class="btn-primary" (click)="onCriar()" [disabled]="isLoading">
-        {{ isLoading ? 'Criando...' : 'Criar Clube' }}
-      </button>
-    </div>
-
-    <div *ngIf="activeTab === 'entrar'" class="tab-content">
-      <div class="form-group">
-        <label>Código de Acesso</label>
-        <input type="text" [(ngModel)]="codigoConvite" placeholder="Ex: A1B2" class="code-input">
-        <small>Peça o código ao administrador do clube.</small>
-      </div>
-
-      <button class="btn-secondary" (click)="onEntrar()" [disabled]="isLoading">
-        {{ isLoading ? 'Entrando...' : 'Entrar no Clube' }}
-      </button>
-    </div>
-
-    <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
-
+<div class="page setup-page">
+  <div class="setup-intro">
+    <span class="eyebrow">O primeiro passo para a próxima sessão</span>
+    <h1>Encontre a sua turma.</h1>
+    <p>
+      Tem um convite? Entre com o código do clube.<br />Ou reúna os amigos e crie um espaço para
+      vocês.
+    </p>
   </div>
+  @if (store.error()) {
+    <app-state
+      kind="error"
+      title="Não conseguimos consultar seu clube"
+      [message]="store.error()"
+      (retry)="retry()"
+    />
+  } @else {
+    <section class="panel setup-card">
+      <div class="setup-choices" aria-label="Como começar">
+        <button
+          type="button"
+          [class.active]="mode() === 'join'"
+          [attr.aria-pressed]="mode() === 'join'"
+          (click)="select('join')"
+          [disabled]="loading()"
+        >
+          <app-icon name="ticket" /> Entrar em um clube
+        </button>
+        <button
+          type="button"
+          [class.active]="mode() === 'create'"
+          [attr.aria-pressed]="mode() === 'create'"
+          (click)="select('create')"
+          [disabled]="loading()"
+        >
+          <app-icon name="plus" /> Criar um clube
+        </button>
+      </div>
+      <div class="setup-body">
+        @if (error()) {
+          <p class="form-error" role="alert">{{ error() }}</p>
+        }
+        @if (mode() === 'join') {
+          <h2>Seu lugar está reservado.</h2>
+          <p class="muted">Peça o código de seis caracteres a alguém do clube.</p>
+          <form [formGroup]="join" (ngSubmit)="submit()" novalidate>
+            <div class="field">
+              <label for="club-code">Código do clube</label
+              ><input
+                class="club-code"
+                id="club-code"
+                formControlName="codigo"
+                placeholder="ABC123"
+                maxlength="6"
+                minlength="6"
+                autocomplete="off"
+                autocapitalize="characters"
+                required
+              />
+              @if (join.controls.codigo.invalid && join.controls.codigo.touched) {
+                <small class="field-error">Informe as seis letras ou números do convite.</small>
+              }
+            </div>
+            <button type="submit" class="btn btn-primary btn-block" [disabled]="loading()">
+              {{ loading() ? 'Entrando…' : 'Entrar no clube' }} <app-icon name="arrow" />
+            </button>
+          </form>
+        } @else {
+          <h2>Todo clube começa com um convite.</h2>
+          <p class="muted">Você será o administrador e poderá organizar os ciclos.</p>
+          <form [formGroup]="create" (ngSubmit)="submit()" novalidate>
+            <div class="field">
+              <label for="club-name">Nome do clube</label
+              ><input
+                id="club-name"
+                formControlName="nome"
+                placeholder="Como a turma vai se chamar?"
+                maxlength="150"
+                required
+              /><app-field-error [control]="create.controls.nome" />
+            </div>
+            <div class="field">
+              <label for="club-description"
+                >Sobre o clube <span class="muted">(opcional)</span></label
+              ><textarea
+                id="club-description"
+                formControlName="descricao"
+                placeholder="Quais histórias vocês querem descobrir?"
+                rows="3"
+                maxlength="5000"
+              ></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block" [disabled]="loading()">
+              {{ loading() ? 'Criando…' : 'Criar meu clube' }} <app-icon name="arrow" />
+            </button>
+          </form>
+        }
+      </div>
+    </section>
+  }
 </div>

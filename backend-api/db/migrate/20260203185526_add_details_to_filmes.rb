@@ -30,7 +30,7 @@ class AddDetailsToFilmes < ActiveRecord::Migration[8.0]
     unless column_exists?(:filmes, :tmdb_id)
       add_column :filmes, :tmdb_id, :string
     end
-    
+
     # Adiciona a referência de User apenas se não existir
     unless column_exists?(:filmes, :user_id)
       add_reference :filmes, :user, null: true, foreign_key: true

@@ -1,284 +1,252 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ClubeService } from '../../services/clube';
-import { RouterModule } from '@angular/router';
-import { FormsModule } from '@angular/forms';
-import Swal from 'sweetalert2';
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Subject, catchError, finalize, of, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ApiService } from '../../services/api.service';
+import { ClubStore } from '../../services/club-store.service';
+import { NotificationsService } from '../../services/notifications.service';
+import { Cycle, CycleDetails, Page } from '../../models/api.models';
+import { MONTHS, errorMessage } from '../../core/utils';
+import {
+  AvatarComponent,
+  ConfirmComponent,
+  DialogComponent,
+  FieldErrorComponent,
+  IconComponent,
+  PaginationComponent,
+  PosterDirective,
+  StateComponent,
+} from '../../shared/ui';
+import { CycleFormComponent } from '../../shared/cycle-form';
 
 @Component({
   selector: 'app-historico-ciclos',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [
+    ReactiveFormsModule,
+    ConfirmComponent,
+    DialogComponent,
+    FieldErrorComponent,
+    IconComponent,
+    PaginationComponent,
+    PosterDirective,
+    StateComponent,
+    CycleFormComponent,
+  ],
   templateUrl: './historico.html',
-  styleUrls: ['./historico.scss']
+  styleUrl: './historico.scss',
 })
 export class HistoricoCiclosComponent implements OnInit {
-
-  anoSelecionado = new Date().getFullYear();
-  clubeId: number | null = null;
-  ciclosCarregados: any[] = [];
-  souAdmin = false;
-
-  // VARIÁVEIS DE CONTROLE DE ANO
-  minAno: number = new Date().getFullYear();
-  maxAno: number = new Date().getFullYear();
-
-  // VARIÁVEIS DE CONTROLE DO MODAL DE GESTÃO
-  mostrarModalGestao = false;
-  cicloSelecionado: any = null;
-  mesSelecionadoNome: string = '';
-  mesSelecionadoNumero: number = 0;
-
-  meses = [
-    { numero: 1, nome: 'JANEIRO', dados: null as any },
-    { numero: 2, nome: 'FEVEREIRO', dados: null as any },
-    { numero: 3, nome: 'MARÇO', dados: null as any },
-    { numero: 4, nome: 'ABRIL', dados: null as any },
-    { numero: 5, nome: 'MAIO', dados: null as any },
-    { numero: 6, nome: 'JUNHO', dados: null as any },
-    { numero: 7, nome: 'JULHO', dados: null as any },
-    { numero: 8, nome: 'AGOSTO', dados: null as any },
-    { numero: 9, nome: 'SETEMBRO', dados: null as any },
-    { numero: 10, nome: 'OUTUBRO', dados: null as any },
-    { numero: 11, nome: 'NOVEMBRO', dados: null as any },
-    { numero: 12, nome: 'DEZEMBRO', dados: null as any }
-  ];
-
-  constructor(
-    private clubeService: ClubeService,
-    private cdr: ChangeDetectorRef
-  ) { }
-
-  ngOnInit() {
-    this.clubeService.getMeuClube().subscribe(res => {
-      this.clubeId = res.clube.id;
-      this.souAdmin = res.sou_admin;
-      this.buscarCiclos();
-    });
-  }
-
-  buscarCiclos() {
-    if (!this.clubeId) return;
-
-    this.clubeService.getCiclos(this.clubeId!).subscribe({
-      next: (res: any[]) => {
-        this.ciclosCarregados = res;
-        this.calcularLimitesAnos();
-        this.atualizarGrid();
-      },
-      error: (err: any) => console.error('Erro ao buscar histórico:', err)
-    });
-  }
-
-  calcularLimitesAnos() {
-    if (this.ciclosCarregados.length === 0) {
-      const anoAtual = new Date().getFullYear();
-      this.minAno = anoAtual;
-      this.maxAno = anoAtual;
-      return;
-    }
-
-    const anos = this.ciclosCarregados.map(c => Number(c.ano));
-    this.minAno = Math.min(...anos);
-    this.maxAno = Math.max(...anos);
-
-    if (this.anoSelecionado < this.minAno) this.anoSelecionado = this.minAno;
-    if (this.anoSelecionado > this.maxAno) this.anoSelecionado = this.maxAno;
-  }
-
-  atualizarGrid() {
-    this.meses.forEach(m => m.dados = null);
-
-    if (!this.ciclosCarregados || this.ciclosCarregados.length === 0) return;
-
-    const ciclosDoAno = this.ciclosCarregados.filter(c => Number(c.ano) === Number(this.anoSelecionado));
-
-    ciclosDoAno.forEach(ciclo => {
-      const mesIndex = this.meses.findIndex(m => Number(m.numero) === Number(ciclo.mes));
-      if (mesIndex !== -1) {
-        this.meses[mesIndex].dados = ciclo;
-      }
-    });
-
-    this.cdr.detectChanges();
-  }
-
-  mudarAno(direcao: number) {
-    const novoAno = this.anoSelecionado + direcao;
-    if (novoAno < this.minAno || novoAno > this.maxAno) return;
-
-    this.anoSelecionado = novoAno;
-    this.atualizarGrid();
-  }
-
-  // --- LÓGICA DE GESTÃO E MODAL ---
-
-  abrirMes(mes: any) {
-    if (!this.clubeId) return;
-
-    this.mesSelecionadoNumero = mes.numero;
-    this.mesSelecionadoNome = mes.nome;
-
-    this.clubeService.getCicloDetalhes(this.clubeId!, mes.numero, this.anoSelecionado).subscribe({
-      next: (res) => {
-        this.cicloSelecionado = res;
-        this.mostrarModalGestao = true;
-        this.cdr.detectChanges();
-      },
-      error: (err: any) => console.error('Erro ao buscar detalhes:', err)
-    });
-  }
-
-  salvarAlteracoesAdmin() {
-    if (!this.clubeId || !this.cicloSelecionado?.id) return;
-
-    const payload = {
-      ciclo_id: this.cicloSelecionado.id,
-      tema: this.cicloSelecionado.tema,
-      status: this.cicloSelecionado.status
-    };
-
-    this.clubeService.updateCicloAdmin(this.clubeId!, payload).subscribe({
-      next: () => {
-        Swal.fire({
-          title: 'Sucesso!',
-          text: 'Ciclo atualizado com sucesso.',
-          icon: 'success',
-          background: '#1e1e1e',
-          color: '#fff',
-          confirmButtonColor: '#00ff88'
-        });
-        this.buscarCiclos();
-      },
-      error: (err: any) => Swal.fire('Erro', err.error?.error || 'Erro ao atualizar', 'error')
-    });
-  }
-
-  removerFilmeAdmin(slot: any) {
-    if (!this.clubeId) return;
-
-    // TRAVA DE SEGURANÇA: Se o ciclo estiver fechado, bloqueia a ação no Typescript também.
-    if (this.cicloSelecionado?.status === 'FECHADO') {
-      Swal.fire({
-        title: 'Ciclo Fechado',
-        text: 'Não é possível remover filmes de um ciclo encerrado. Altere o status para "Aberto" primeiro.',
-        icon: 'warning',
-        background: '#1e1e1e',
-        color: '#fff'
+  readonly store = inject(ClubStore);
+  private readonly api = inject(ApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly notices = inject(NotificationsService);
+  private readonly destroy = inject(DestroyRef);
+  readonly months = MONTHS;
+  readonly data = signal<Page<Cycle> | null>(null);
+  readonly loading = signal(true);
+  readonly error = signal('');
+  readonly selected = signal<Cycle | null>(null);
+  readonly details = signal<CycleDetails | null>(null);
+  readonly detailLoading = signal(false);
+  readonly detailError = signal('');
+  readonly creating = signal(false);
+  readonly saving = signal(false);
+  readonly saveError = signal('');
+  readonly success = signal('');
+  readonly confirmation = signal<{
+    kind: 'cycle' | 'film';
+    slotId?: number;
+    title: string;
+    message: string;
+  } | null>(null);
+  readonly deleting = signal(false);
+  readonly deleteError = signal('');
+  readonly form = inject(FormBuilder).nonNullable.group({
+    tema: ['', Validators.maxLength(500)],
+    status: ['ABERTO' as Cycle['status']],
+  });
+  private readonly pages = new Subject<number>();
+  private readonly detailRequests = new Subject<Cycle>();
+  ngOnInit(): void {
+    this.form.valueChanges
+      .pipe(takeUntilDestroyed(this.destroy))
+      .subscribe(() => this.success.set(''));
+    this.pages
+      .pipe(
+        switchMap((page) => {
+          const club = this.store.club();
+          if (!club) return of(null);
+          this.loading.set(true);
+          this.error.set('');
+          return this.api.cycles(club.id, page).pipe(
+            catchError((error: unknown) => {
+              this.error.set(errorMessage(error));
+              return of(null);
+            }),
+            finalize(() => this.loading.set(false)),
+          );
+        }),
+        takeUntilDestroyed(this.destroy),
+      )
+      .subscribe((data) => {
+        if (data && data.page > Math.max(1, Math.ceil(data.total / data.perPage))) {
+          this.changePage(Math.max(1, Math.ceil(data.total / data.perPage)));
+          return;
+        }
+        this.data.set(data);
       });
-      return;
-    }
-
-    Swal.fire({
-      title: 'Remover Filme?',
-      text: `Deseja remover o filme do slot #${slot.posicao}?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Sim, remover',
-      cancelButtonText: 'Cancelar',
-      background: '#1e1e1e',
-      color: '#fff',
-      confirmButtonColor: '#ff5555'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        const payload = { slot_id: slot.id, remover_filme: true };
-
-        this.clubeService.updateSlotAdmin(this.clubeId!, payload).subscribe({
-          next: () => {
-            slot.filme = null;
-            Swal.fire({
-              title: 'Removido!',
-              text: 'O filme foi retirado do slot.',
-              icon: 'success',
-              background: '#1e1e1e',
-              color: '#fff'
-            });
-            this.cdr.detectChanges();
-          },
-          error: (err: any) => {
-            const mensagemServidor = err.error?.error || 'Erro ao processar a exclusão.';
-            Swal.fire({
-              title: 'Ação Bloqueada',
-              text: mensagemServidor,
-              icon: 'error',
-              background: '#1e1e1e',
-              color: '#fff',
-              confirmButtonColor: '#00ff88'
-            });
-          }
-        });
-      }
+    this.detailRequests
+      .pipe(
+        switchMap((cycle) => {
+          const club = this.store.club();
+          if (!club) return of(null);
+          this.detailLoading.set(true);
+          this.detailError.set('');
+          return this.api.cycleDetails(club.id, cycle.mes, cycle.ano).pipe(
+            catchError((error: unknown) => {
+              this.detailError.set(errorMessage(error));
+              return of(null);
+            }),
+            finalize(() => this.detailLoading.set(false)),
+          );
+        }),
+        takeUntilDestroyed(this.destroy),
+      )
+      .subscribe((details) => {
+        if (details?.existe === false) {
+          this.detailError.set('Este ciclo não está mais disponível. Atualize a lista.');
+          this.details.set(null);
+          return;
+        }
+        this.details.set(details);
+        if (details) this.form.reset({ tema: details.tema || '', status: details.status });
+      });
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroy))
+      .subscribe((params) => this.pages.next(Math.max(1, Number(params.get('page')) || 1)));
+  }
+  load(): void {
+    this.pages.next(this.data()?.page || 1);
+  }
+  changePage(page: number): void {
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { page } });
+  }
+  open(cycle: Cycle): void {
+    this.success.set('');
+    this.selected.set(cycle);
+    this.details.set(null);
+    this.saveError.set('');
+    this.detailRequests.next(cycle);
+  }
+  retryDetails(): void {
+    const selected = this.selected();
+    if (selected) this.detailRequests.next(selected);
+  }
+  close(): void {
+    if (!this.saving() && !this.deleting()) this.selected.set(null);
+  }
+  statusLabel(status: Cycle['status']): string {
+    return status === 'ABERTO' ? 'Aberto' : status === 'FECHADO' ? 'Encerrado' : 'Aguardando';
+  }
+  savedCycle(): void {
+    this.creating.set(false);
+    this.notices.show('Ciclo aberto e vagas sorteadas.');
+    this.store.invalidate();
+    this.load();
+  }
+  save(): void {
+    const cycle = this.selected(),
+      club = this.store.club();
+    if (!cycle || !club || this.saving()) return;
+    this.form.markAllAsTouched();
+    if (this.form.invalid) return;
+    this.saving.set(true);
+    this.saveError.set('');
+    this.success.set('');
+    const value = this.form.getRawValue();
+    this.api
+      .updateCycle(club.id, cycle.id, value.tema, value.status)
+      .pipe(
+        takeUntilDestroyed(this.destroy),
+        finalize(() => this.saving.set(false)),
+      )
+      .subscribe({
+        next: () => {
+          this.selected.set({ ...cycle, ...value });
+          this.details.update((data) => (data ? { ...data, ...value } : data));
+          this.success.set('Alterações do ciclo salvas.');
+          this.store.invalidate();
+          this.load();
+        },
+        error: (error: unknown) => this.saveError.set(errorMessage(error)),
+      });
+  }
+  askRemoveFilm(slotId: number, title: string): void {
+    this.deleteError.set('');
+    this.confirmation.set({
+      kind: 'film',
+      slotId,
+      title: 'Remover esta indicação?',
+      message:
+        'O filme “' +
+        title +
+        '” sairá da vaga. A pessoa responsável poderá escolher outro filme. Indicações avaliadas não podem ser removidas.',
     });
   }
-
-  limparCicloAdmin() {
-    if (!this.clubeId || !this.cicloSelecionado?.id) return;
-
-    Swal.fire({
-      title: 'APAGAR CICLO INTEIRO?',
-      text: 'Isso vai excluir todas as vagas, filmes e avaliações deste mês. Essa ação é IRREVERSÍVEL!',
-      icon: 'error',
-      showCancelButton: true,
-      confirmButtonText: 'Sim, limpar tudo!',
-      cancelButtonText: 'Cancelar',
-      background: '#1e1e1e',
-      color: '#fff',
-      confirmButtonColor: '#ff4d4d'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        // Chamada para o serviço deletar o ciclo. 
-        // OBS: Você precisará adicionar o método deletarCiclo no seu arquivo clube.service.ts
-        this.clubeService.deletarCiclo(this.clubeId!, this.cicloSelecionado.id).subscribe({
-          next: () => {
-            Swal.fire({
-              title: 'Limpou!',
-              text: 'O ciclo foi totalmente removido.',
-              icon: 'success',
-              background: '#1e1e1e',
-              color: '#fff'
-            });
-            this.mostrarModalGestao = false;
-            this.cicloSelecionado = null;
-            this.buscarCiclos(); // Recarrega a tela inicial para atualizar a Grid do ano
-          },
-          error: (err: any) => {
-            const msg = err.error?.error || 'Erro ao limpar o ciclo do servidor.';
-            Swal.fire('Erro', msg, 'error');
-          }
-        });
-      }
+  askDeleteCycle(): void {
+    const cycle = this.selected();
+    if (!cycle) return;
+    this.deleteError.set('');
+    this.confirmation.set({
+      kind: 'cycle',
+      title: 'Excluir o ciclo de ' + this.months[cycle.mes - 1] + '?',
+      message:
+        'Esta ação remove as vagas, avaliações e encontros deste ciclo. Ela não pode ser desfeita. Os outros ciclos permanecem no clube.',
     });
   }
-
-  // VARIÁVEIS DO DISCORD
-  mostrarModalConfig = false;
-  webhookUrl = '';
-
-  abrirConfig() {
-    this.mostrarModalConfig = true;
+  confirmDelete(): void {
+    const confirmation = this.confirmation(),
+      cycle = this.selected(),
+      club = this.store.club();
+    if (!confirmation || !cycle || !club || this.deleting()) return;
+    this.deleting.set(true);
+    this.deleteError.set('');
+    const request =
+      confirmation.kind === 'cycle'
+        ? this.api.deleteCycle(club.id, cycle.id)
+        : this.api.removeFilm(club.id, confirmation.slotId!);
+    request
+      .pipe(
+        takeUntilDestroyed(this.destroy),
+        finalize(() => this.deleting.set(false)),
+      )
+      .subscribe({
+        next: () => {
+          this.confirmation.set(null);
+          if (confirmation.kind === 'cycle') this.selected.set(null);
+          else
+            this.details.update((data) =>
+              data
+                ? {
+                    ...data,
+                    slots: data.slots.map((slot) =>
+                      slot.id === confirmation.slotId ? { ...slot, filme: null } : slot,
+                    ),
+                  }
+                : data,
+            );
+          this.notices.show(
+            confirmation.kind === 'cycle' ? 'Ciclo excluído.' : 'Indicação removida.',
+          );
+          if (confirmation.kind === 'film')
+            this.success.set('Indicação removida. A vaga está disponível para uma nova escolha.');
+          this.store.invalidate();
+          this.load();
+        },
+        error: (error: unknown) => this.deleteError.set(errorMessage(error)),
+      });
   }
-
-  salvarWebhook() {
-    if (!this.webhookUrl) {
-      Swal.fire('Atenção', 'Cole a URL do Webhook primeiro!', 'warning');
-      return;
-    }
-
-    this.clubeService.atualizarDiscord(this.webhookUrl).subscribe({
-      next: () => {
-        Swal.fire({
-          title: 'Conectado!',
-          text: 'O Oráculo enviou uma mensagem de teste no seu Discord!',
-          icon: 'success',
-          background: '#1e1e1e', color: '#fff'
-        });
-        this.mostrarModalConfig = false;
-        this.webhookUrl = ''; // Limpa o campo
-      },
-      error: (err: any) => {
-        Swal.fire('Erro', err.error?.error || 'Falha ao salvar a URL.', 'error');
-      }
-    });
-  }
-
 }

@@ -1,59 +1,21 @@
 source "https://rubygems.org"
 
-# --- NÚCLEO DO FRAMEWORK ---
-# A versão 8.0 do Rails é a mais moderna, focada em performance e simplicidade.
-gem "rails", "~> 8.0.4"
-
-# --- BANCO DE DADOS ---
-# Adaptador para o PostgreSQL. Essencial para que o Rails entenda o seu banco no Docker.
+gem "rails", "~> 8.1.4", ">= 8.1.4.1"
 gem "pg", "~> 1.1"
-
-# --- SERVIDOR WEB ---
-# O Puma é o servidor que "escuta" as requisições HTTP e as passa para o Rails processar.
 gem "puma", ">= 5.0"
-
-# --- SEGURANÇA E FUSO HORÁRIO ---
-# Garante que o Rails saiba lidar com horários no Windows e JRuby (ajuda na compatibilidade).
-gem "tzinfo-data", platforms: %i[ windows jruby ]
-
-# --- NOVOS PADRÕES DO RAILS 8 (SOLID STACK) ---
-# O Rails 8 substituiu o Redis pelo banco de dados para tarefas de cache e fila.
+gem "tzinfo-data", platforms: %i[windows jruby]
 gem "solid_cache"
 gem "solid_queue"
 gem "solid_cable"
-
-# --- PERFORMANCE ---
-# Acelera o carregamento do Rails ao ligar o container (cria um cache do boot).
 gem "bootsnap", require: false
-
-# --- DEPLOY E INFRAESTRUTURA ---
-# Ferramenta para deploy simplificado em servidores próprios via Docker.
 gem "kamal", require: false
-
-# Otimiza o Puma para servir arquivos e lidar com compressão de dados.
 gem "thruster", require: false
-
-# --- CORS (Cross-Origin Resource Sharing) ---
-# ESSENCIAL: Permite que o seu Angular (Porta 4200) consiga conversar com o Rails (Porta 3000).
-# Sem isso, o navegador bloqueia as requisições por segurança.
 gem "rack-cors"
-
-# --- AMBIENTE DE DESENVOLVIMENTO E TESTE ---
+gem "bcrypt", "~> 3.1.7"
+gem "jwt", "~> 3.1"
 
 group :development, :test do
-  # Ferramenta para debugar o código (colocar 'binding.break' e parar a execução).
-  gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
-
-  # Auditoria de Segurança: Varre seu código em busca de falhas conhecidas.
+  gem "debug", platforms: %i[mri windows], require: "debug/prelude"
   gem "brakeman", require: false
-
-  # O "Guarda de Trânsito" do código: Garante que você siga as boas práticas de escrita.
   gem "rubocop-rails-omakase", require: false
-
-  # --- AS ESTRELAS DO SEU PROJETO ---
-  # Algoritmo de criptografia para o 'has_secure_password' do Model User.
-  gem 'bcrypt', '~> 3.1.7' # Para senha_hash
-  
-  # Motor de geração de Tokens para manter o usuário logado no Angular.
-  gem 'jwt'                
 end

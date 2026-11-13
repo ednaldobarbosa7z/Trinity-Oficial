@@ -1,14 +1,12 @@
-.app-layout {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    /* Ocupa 100% da altura da tela */
-    background-color: #121212;
-    /* Fundo preto global */
+:host {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
 }
-
-.page-content {
-    flex: 1;
-    /* Ocupa todo o espaço disponível, empurrando o footer */
-    width: 100%;
+main {
+  flex: 1;
+  min-width: 0;
+}
+.auth-main {
+  display: flex;
 }

@@ -43,4 +43,7 @@ __screenshots__/
 Thumbs.db
 
 # Ignorar as chaves reais
-src/environments/environment.ts
+# environment.ts contains only safe defaults; Docker injects the root .env at runtime.
+/.cache/
+/playwright-report/
+/test-results/

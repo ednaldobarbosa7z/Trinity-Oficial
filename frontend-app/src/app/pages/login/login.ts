@@ -1,68 +1,63 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router'; // Importação do RouterModule
+import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
+import { FieldErrorComponent, IconComponent } from '../../shared/ui';
+import { AuthLayoutComponent } from '../../shared/auth-layout';
+import { errorMessage, safeRedirect } from '../../core/utils';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule], // Adicionado RouterModule aqui
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    FieldErrorComponent,
+    IconComponent,
+    AuthLayoutComponent,
+  ],
   templateUrl: './login.html',
-  styleUrl: './login.scss'
+  styleUrl: './login.scss',
 })
 export class LoginComponent {
-
-  email = '';
-  password = '';
-  errorMessage = '';
-  isLoading = false;
-
-  constructor(private router: Router, private authService: AuthService) { }
-
-  // O HTML chama (ngSubmit)="onSubmit()", então o nome aqui precisa ser onSubmit
-  onSubmit() {
-    // Validação básica
-    if (!this.email || !this.password) {
-      this.errorMessage = 'Preencha todos os campos!';
-      return;
-    }
-
-    this.isLoading = true;
-    this.errorMessage = '';
-
-    // Envia o objeto com email e senha
-    this.authService.login({ email: this.email, password: this.password })
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroy = inject(DestroyRef);
+  readonly form = inject(FormBuilder).nonNullable.group({
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', Validators.required],
+  });
+  readonly loading = signal(false);
+  readonly error = signal('');
+  readonly showPassword = signal(false);
+  submit(): void {
+    if (this.loading()) return;
+    this.form.markAllAsTouched();
+    if (this.form.invalid) return;
+    this.loading.set(true);
+    this.error.set('');
+    const value = this.form.getRawValue();
+    this.auth
+      .login(value.email, value.password)
+      .pipe(
+        takeUntilDestroyed(this.destroy),
+        finalize(() => this.loading.set(false)),
+      )
       .subscribe({
-        next: (response) => {
-          this.isLoading = false;
-          console.log('Login sucesso:', response);
-
-          // --- PASSO 1: Salvar o Token (Essencial para autenticação) ---
-          this.authService.saveToken(response.token);
-
-          // --- PASSO 2: Salvar os dados do usuário (Essencial para a Navbar) ---
-          // Isso permite que a Navbar mostre o Nickname em vez de "Visitante"
-          localStorage.setItem('usuario_dados', JSON.stringify(response.user));
-
-          // --- PASSO 3: Redirecionamento ---
-          // Verifica se o usuário já tem clube
-          if (response.user.has_club) {
-            this.router.navigate(['/dashboard']);
-          } else {
-            this.router.navigate(['/setup']);
-          }
-        },
-        error: (err) => {
-          this.isLoading = false;
-          console.error(err);
-          // Tenta pegar mensagem específica do backend ou usa genérica
-          this.errorMessage = err.error?.error || 'Email ou senha incorretos.';
-        }
+        next: () =>
+          void this.router.navigateByUrl(
+            safeRedirect(this.route.snapshot.queryParamMap.get('redirect')),
+          ),
+        error: (error: unknown) =>
+          this.error.set(
+            error instanceof HttpErrorResponse && error.status === 401
+              ? 'Email ou senha inválidos. Confira os dados e tente novamente.'
+              : errorMessage(error),
+          ),
       });
-  }
-
-  goToRegister() {
-    this.router.navigate(['/register']);
   }
 }

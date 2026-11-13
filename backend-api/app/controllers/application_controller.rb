@@ -1,31 +1,65 @@
 class ApplicationController < ActionController::API
-  
-  # --- MÉTODO DE AUTENTICAÇÃO GLOBAL ---
-  # Este método é o responsável por verificar se quem está chamando a API é quem diz ser.
-  # Geralmente é chamado via 'before_action' nos outros controllers.
+  before_action :authorize_request
+
+  rescue_from StandardError, with: :internal_error
+  rescue_from ActiveRecord::RecordNotFound, with: -> { render_error("Registro não encontrado.", :not_found) }
+  rescue_from ActiveRecord::RecordInvalid, with: ->(error) { render_error(error.record.errors.full_messages, :unprocessable_entity) }
+  rescue_from ActiveRecord::RecordNotUnique, with: -> { render_error("Registro já existe.", :conflict) }
+  rescue_from ActiveRecord::InvalidForeignKey, ActiveRecord::RecordNotDestroyed,
+    with: -> { render_error("O registro possui vínculos que impedem esta operação.", :unprocessable_entity) }
+  rescue_from ActionController::ParameterMissing, ActionController::BadRequest,
+    with: -> { render_error("Parâmetros inválidos ou ausentes.", :bad_request) }
+  rescue_from ApiError, with: ->(error) { render_error(error.message, error.status) }
+
+  private
+
   def authorize_request
-    # 1. Busca o campo 'Authorization' no cabeçalho (Header) da requisição HTTP.
-    header = request.headers['Authorization']
+    scheme, token, extra = request.authorization.to_s.split
+    raise JWT::DecodeError unless scheme == "Bearer" && token.present? && extra.nil?
 
-    # 2. O padrão do token é "Bearer <token>". 
-    # O .split(' ').last remove a palavra "Bearer" e pega apenas a string do token.
-    header = header.split(' ').last if header
-    
-    begin
-      # 3. Usa a sua classe utilitária JsonWebToken para tentar traduzir o token.
-      # Se o token estiver expirado ou alterado, ele lançará um erro aqui.
-      @decoded = JsonWebToken.decode(header)
+    payload = JsonWebToken.decode(token)
+    @current_user = User.find(payload.fetch("user_id"))
+  rescue JWT::DecodeError, KeyError, ActiveRecord::RecordNotFound
+    render_error("Acesso não autorizado.", :unauthorized)
+  end
 
-      # 4. Se a decodificação funcionar, buscamos o usuário no banco pelo ID que estava no token.
-      # O uso de @current_user (variável de instância) torna o usuário disponível 
-      # para todos os controllers que herdam desta classe.
-      @current_user = User.find(@decoded[:user_id])
-    rescue ActiveRecord::RecordNotFound, JWT::DecodeError
+  def member_clube(id = nil)
+    scope = @current_user.clubes
+    id.present? ? scope.find(id) : scope.order(:id).first!
+  end
 
-      # 5. TRATAMENTO DE ERRO:
-      # Se o ID do usuário não existir ou o token for inválido/expirado,
-      # a API interrompe a execução e retorna "401 Unauthorized" imediatamente.
-      render json: { errors: 'Acesso não autorizado' }, status: :unauthorized
+  def admin_clube(id = nil)
+    clube = member_clube(id)
+    unless clube.membro_clubes.exists?(user: @current_user, eh_administrador: true)
+      raise ApiError.new("Apenas administradores podem realizar esta operação.", status: :forbidden)
     end
+    clube
+  end
+
+  def accessible_filmes
+    Filme.where(clube_id: @current_user.clubes.select(:id))
+  end
+
+  def accessible_ciclos
+    Ciclo.where(clube_id: @current_user.clubes.select(:id))
+  end
+
+  def paginate(scope)
+    page = [ params.fetch(:page, 1).to_i, 1 ].max
+    per_page = params.fetch(:per_page, 50).to_i.clamp(1, 100)
+    response.set_header("X-Total-Count", scope.count.to_s)
+    response.set_header("X-Page", page.to_s)
+    response.set_header("X-Per-Page", per_page.to_s)
+    scope.limit(per_page).offset((page - 1) * per_page)
+  end
+
+  def render_error(messages, status)
+    errors = Array(messages)
+    render json: { error: errors.join(", "), errors: errors }, status: status
+  end
+
+  def internal_error(error)
+    Rails.logger.error("request_id=#{request.request_id} error=#{error.class}")
+    render_error("Erro interno. Tente novamente.", :internal_server_error)
   end
 end

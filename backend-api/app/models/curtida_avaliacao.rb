@@ -1,6 +1,6 @@
 class CurtidaAvaliacao < ApplicationRecord
   # --- RELACIONAMENTOS ---
-  # Indica quem é o autor da "curtida". 
+  # Indica quem é o autor da "curtida".
   # No seu modelo User, isso é referenciado como 'curtidas_feitas'.
   belongs_to :user
 

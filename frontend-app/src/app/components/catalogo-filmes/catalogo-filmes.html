@@ -1,121 +1,115 @@
-<div class="catalogo-container" *ngIf="!isLoading; else loading">
-
-    <header class="page-header">
-        <div class="header-content">
-            <h1>🎬 Galeria do Clube</h1>
-            <p>O arquivo definitivo das nossas sessões</p>
-        </div>
-    </header>
-
-    <ng-container *ngFor="let ciclo of ciclosCatalogo">
-
-        <div class="ciclo-divider">
-            <div class="ciclo-info">
-                <h2>{{ nomeDoMes(ciclo.mes) }} <span class="ano">{{ ciclo.ano }}</span></h2>
-                <span class="tema-badge" *ngIf="ciclo.tema">🎭 {{ ciclo.tema }}</span>
-            </div>
-            <div class="line"></div>
-        </div>
-
-        <div class="movies-grid">
-            <div class="movie-card" *ngFor="let filme of ciclo.filmes" (click)="abrirDetalhes(filme)">
-                <div class="poster-wrapper">
-                    <img [src]="filme.poster" [alt]="filme.titulo">
-
-                    <div class="poster-overlay">
-                        <div class="rating-circle" [class.high]="filme.stats.media_geral >= 4">
-                            {{ filme.stats.media_geral }}
-                        </div>
-                        <span class="view-details">Ver Detalhes</span>
-                    </div>
-                </div>
-                <div class="movie-meta">
-                    <h3 class="title">{{ filme.titulo }}</h3>
-                    <span class="year">{{ filme.ano }}</span>
-                </div>
-            </div>
-        </div>
-
-    </ng-container>
-
-    <div *ngIf="ciclosCatalogo.length === 0" class="empty-catalogo">
-        <p>Ainda não há filmes avaliados no clube.</p>
+<div class="page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow"><span class="line"></span> A memória do clube</span>
+      <h1>Histórias que ficam.</h1>
+      <p>Revisite as indicações, descubra as notas da turma e continue a conversa.</p>
     </div>
-
-    <div class="modal-overlay" *ngIf="filmeSelecionado" (click)="fecharDetalhes()">
-        <div class="modal-raiox" (click)="$event.stopPropagation()">
-
-            <button class="btn-close" (click)="fecharDetalhes()">✖</button>
-
-            <div class="modal-hero" [style.backgroundImage]="'url(' + filmeSelecionado.backdrop + ')'">
-                <div class="hero-overlay"></div>
-                <div class="hero-content">
-                    <div class="hero-main">
-                        <img [src]="filmeSelecionado.poster" class="modal-poster">
-                        <div class="hero-text">
-                            <span class="indicado clickable-user"
-                                (click)="visitarPerfil(filmeSelecionado.indicado_por.id)" title="Visitar perfil">
-                                Indicado por <strong>{{ filmeSelecionado.indicado_por.nickname }}</strong>
-                            </span>
-                            <h2>{{ filmeSelecionado.titulo }} <small>({{ filmeSelecionado.ano }})</small></h2>
-                            <p class="sinopse">{{ filmeSelecionado.sinopse }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="stats-panel">
-                <div class="stat-box">
-                    <span class="value">⭐ {{ filmeSelecionado.stats.media_geral }}</span>
-                    <span class="label">Média do Clube</span>
-                </div>
-                <div class="stat-box">
-                    <span class="value">🔁 {{ filmeSelecionado.stats.porcentagem_rewatch }}%</span>
-                    <span class="label">Re-watch</span>
-                </div>
-                <div class="stat-box" *ngIf="filmeSelecionado.stats.is_polemico">
-                    <span class="value">🔥</span>
-                    <span class="label">Polêmico</span>
-                </div>
-                <div class="stat-box">
-                    <span class="value">{{ filmeSelecionado.stats.total_avaliacoes }}</span>
-                    <span class="label">Avaliações</span>
-                </div>
-            </div>
-
-            <div class="reviews-section">
-                <h3>Mural de Críticas</h3>
-                <div class="reviews-list">
-                    <div class="review-card" *ngFor="let av of filmeSelecionado.avaliacoes">
-
-                        <div class="review-user clickable-user" (click)="visitarPerfil(av.user.id)"
-                            title="Visitar perfil de {{ av.user.nickname }}">
-                            <div class="mini-avatar">
-                                <img *ngIf="av.user.foto" [src]="av.user.foto">
-                                <span *ngIf="!av.user.foto">{{ av.user.nickname.charAt(0) }}</span>
-                            </div>
-                            <div class="user-info">
-                                <span class="nick">{{ av.user.nickname }}</span>
-                                <span class="nota">Nota: <strong>{{ av.nota }}</strong></span>
-                            </div>
-                            <span class="rewatch-icon" *ngIf="av.assistiria_novamente">🔁</span>
-                        </div>
-
-                        <div class="review-body">
-                            <div class="ponto-alto" *ngIf="av.destaque">
-                                "{{ av.destaque }}"
-                            </div>
-                            <p class="comentario">{{ av.comentario }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
+    <span class="badge"><app-icon name="grid" [size]="15" /> Catálogo do clube</span>
+  </header>
+  <div class="catalog-toolbar">
+    <div>
+      <label for="catalog-query">Filtrar filmes nesta página</label>
+      <div class="catalog-search">
+        <app-icon name="search" [size]="18" /><input
+          type="search"
+          id="catalog-query"
+          [formControl]="query"
+          placeholder="Qual história você está procurando?"
+        />
+      </div>
     </div>
-
+    <p>
+      A seleção está organizada por ciclo.<br />Use as páginas para explorar os meses anteriores.
+    </p>
+  </div>
+  @if (loading()) {
+    <app-state kind="loading" title="Revisitando as sessões do clube…" />
+  } @else if (error()) {
+    <app-state kind="error" title="O catálogo não carregou" [message]="error()" (retry)="load()" />
+  } @else {
+    @for (cycle of filtered(); track cycle.ano + '-' + cycle.mes) {
+      <section class="catalog-cycle">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">{{ months[cycle.mes - 1] }} · {{ cycle.ano }}</span>
+            <h2>{{ cycle.tema || 'Uma seleção de boas histórias' }}</h2>
+          </div>
+          <span class="badge"
+            >{{ cycle.filmes.length }} {{ cycle.filmes.length === 1 ? 'filme' : 'filmes' }}</span
+          >
+        </div>
+        <div class="film-grid">
+          @for (film of cycle.filmes; track film.id) {
+            <button
+              type="button"
+              class="catalog-film"
+              (click)="details(film)"
+              [attr.aria-label]="'Ver detalhes de ' + film.titulo"
+            >
+              <div class="poster-wrap">
+                <img
+                  appPoster
+                  [src]="film.poster || '/poster-placeholder.svg'"
+                  [alt]="'Pôster de ' + film.titulo"
+                  width="230"
+                  height="345"
+                  loading="lazy"
+                  decoding="async"
+                />
+                @if (film.stats.total_avaliacoes) {
+                  <span class="poster-rating"
+                    ><app-icon name="star" [size]="13" />
+                    {{ film.stats.media_geral | number: '1.1-1' }}</span
+                  >
+                }
+              </div>
+              <div class="film-caption">
+                <span class="film-year">{{ film.ano || 'Ano não informado' }}</span>
+                <h3>{{ film.titulo }}</h3>
+                <p>Por {{ film.indicado_por.nickname }}</p>
+                <div>
+                  <small
+                    >{{ film.stats.total_avaliacoes }}
+                    {{ film.stats.total_avaliacoes === 1 ? 'avaliação' : 'avaliações' }}</small
+                  ><app-icon name="arrow" [size]="16" />
+                </div>
+              </div>
+            </button>
+          }
+        </div>
+      </section>
+    } @empty {
+      <app-state
+        [title]="
+          term()
+            ? 'Nenhum filme com esse nome nesta página'
+            : 'Cada clube começa com a primeira sessão'
+        "
+        [message]="
+          term()
+            ? 'Tente outro título ou explore as páginas anteriores.'
+            : 'As indicações dos ciclos vão formar a coleção de vocês aqui.'
+        "
+      >
+        @if (term()) {
+          <button type="button" class="btn btn-secondary" (click)="query.setValue('')">
+            Limpar filtro
+          </button>
+        }
+      </app-state>
+    }
+    @if (data(); as result) {
+      <app-pagination
+        [page]="result.page"
+        [perPage]="result.perPage"
+        [total]="result.total"
+        label="ciclos"
+        (change)="changePage($event)"
+      />
+    }
+  }
 </div>
-
-<ng-template #loading>
-    <div class="loading-screen">Mergulhando no catálogo...</div>
-</ng-template>
+@if (selected(); as movie) {
+  <app-film-details [movie]="movie" (closed)="selected.set(null)" />
+}

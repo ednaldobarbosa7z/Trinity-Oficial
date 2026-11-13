@@ -1,0 +1,45 @@
+name: Backend CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: backend-api
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd="pg_isready -U postgres" --health-interval=5s --health-timeout=5s --health-retries=10
+    env:
+      RAILS_ENV: test
+      DATABASE_HOST: localhost
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: postgres
+      TEST_DATABASE_NAME: trinity_ci_test
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          working-directory: backend-api
+          ruby-version: .ruby-version
+          bundler-cache: true
+      - run: bundle exec brakeman --no-pager
+      - run: bundle exec rubocop
+      - run: bundle exec rails db:prepare
+      - run: bundle exec rails zeitwerk:check
+      - run: bundle exec rails test
